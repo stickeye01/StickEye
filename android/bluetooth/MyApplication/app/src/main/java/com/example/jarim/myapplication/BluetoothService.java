@@ -31,7 +31,7 @@ public class BluetoothService {
 
     // RFCOMM Protocol
     private static final UUID MY_UUID = UUID
-            .fromString("00000003-0000-1000-8000-00805F9B34FB");
+            .fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private BluetoothAdapter btAdapter;
 
@@ -250,9 +250,14 @@ public class BluetoothService {
 
             // 디바이스 정보를 얻어서 BluetoothSocket 생성
             try {
-                tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
-            } catch (IOException e) {
-                Log.e(TAG, "create() failed", e);
+                //tmp = device.createInsecureRfcommSocketToServiceRecord(MY_UUID);
+                tmp = (BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[]{int.class}).invoke(device, 1);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
             }
             mmSocket = tmp;
         }
@@ -274,7 +279,7 @@ public class BluetoothService {
             } catch (IOException e) {
                 connectionFailed(); // 연결 실패시 불러오는 메소드
                 Log.d(TAG, "Connect Fail");
-
+                Log.d(TAG, "ERROR:", e);
                 // socket을 닫는다.
                 try {
                     mmSocket.close();
@@ -333,21 +338,22 @@ public class BluetoothService {
             Log.i(TAG, "BEGIN mConnectedThread");
             byte[] buffer = new byte[1024];
             int bytes;
+            String sensor_val; // Sensor string stream that comes from Arduino
 
             // Keep listening to the InputStream while connected
             while (true) {
+                Log.i(TAG, "Loop is started");
+                // ** get byte stream values from Arduino
                 try {
-                    // InputStream으로부터 값을 받는 읽는 부분(값을 받는다)
                     bytes = mmInStream.read(buffer);
-
+                    // convert byte stream to String object
+                    sensor_val = new String(buffer, "UTF-8");
+                    Log.e(TAG, "GET MSG: "+sensor_val);
                 } catch (IOException e) {
-                    Log.e(TAG, "disconnected", e);
-                    connectionLost();
-                    break;
+                    e.printStackTrace();
                 }
             }
         }
-
         public void write(byte[] buffer) {
             try {
                 // 값을 쓰는 부분(값을 보낸다)

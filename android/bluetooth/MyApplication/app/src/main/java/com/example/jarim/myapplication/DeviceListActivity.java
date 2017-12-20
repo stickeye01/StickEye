@@ -86,7 +86,7 @@ public class DeviceListActivity extends Activity {
         scanButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 doDiscovery();
-                v.setVisibility(View.GONE);
+                //v.setVisibility(View.GONE);
             }
         });
     }
@@ -121,9 +121,11 @@ public class DeviceListActivity extends Activity {
         public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
             mBtAdapter.cancelDiscovery();
 
+            // Parse device information in order to get address of the target device
             String info = ((TextView) v).getText().toString();
             String address = info.substring(info.length() - 17);
 
+            // Send information to the caller activity in order to attempt to connect the device
             Intent intent = new Intent();
             intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
 
@@ -146,7 +148,7 @@ public class DeviceListActivity extends Activity {
                 if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
                     mNewDevicesArrayAdapter.add(device.getName() + "\n" + device.getAddress());
                 }
-
+            // When discovery cannot find any device
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 setProgressBarIndeterminateVisibility(false);
                 setTitle(R.string.select_device);
