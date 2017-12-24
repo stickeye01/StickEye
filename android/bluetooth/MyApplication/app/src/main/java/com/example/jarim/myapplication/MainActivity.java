@@ -34,6 +34,8 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private BluetoothService btService = null;
 
+    // Database
+    private DBHandler mDBOpenHandler;
 
     private final Handler mHandler = new Handler() {
 
@@ -83,6 +85,9 @@ public class MainActivity extends Activity implements OnClickListener {
         if(btService == null) {
             btService = new BluetoothService(this, mHandler);
         }
+
+        mDBOpenHandler = new DBHandler(this);
+        mDBOpenHandler.open();
     }
 
     @Override
