@@ -75,13 +75,13 @@ public class MainActivity extends Activity implements OnClickListener {
                 new String[]{Manifest.permission.BLUETOOTH_ADMIN},
                 MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN);
 
-        /** Main Layout **/
+        // Main Layout
         btn_Connect = (Button) findViewById(R.id.btn_connect);
         txt_Result = (TextView) findViewById(R.id.txt_result);
 
         btn_Connect.setOnClickListener(this);
 
-        // BluetoothService 클래스 생성
+        // create BluetoothService
         if(btService == null) {
             btService = new BluetoothService(this, mHandler);
         }
@@ -93,7 +93,7 @@ public class MainActivity extends Activity implements OnClickListener {
     @Override
     public void onClick(View v) {
         if(btService.getDeviceState()) {
-            // 블루투스가 지원 가능한 기기일 때
+            // If the device supports bluetooth function
             btService.enableBluetooth();
         } else {
             finish();
