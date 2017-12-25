@@ -259,11 +259,13 @@ public class BluetoothService {
             try {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
                     tmp = device.createInsecureRfcommSocketToServiceRecord(MY_UUID);
+                    Log.e("LHC", "device information:\n"+device.toString());
                     Log.i("LHC", "SDK VERSION IS LOWER THAN JELLY BEAN, ret code"+tmp.toString());
                 } else {
                     tmp = (BluetoothSocket) device.getClass()
                             .getMethod("createRfcommSocket", new Class[]{int.class})
                             .invoke(device, 1);
+                    Log.e("LHC", "device information:\n"+device.toString());
                     Log.i("LHC", "SDK VERSION IS EQUAL AND HIGHER THAN JELLY BEAN, ret code"+tmp.toString());
                 }
             } catch (IllegalAccessException e) {
