@@ -1,6 +1,7 @@
 package com.example.jarim.myapplication;
 
 import android.Manifest;
+import android.content.pm.PackageManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -15,6 +16,8 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 
+import java.io.UnsupportedEncodingException;
+
 public class MainActivity extends Activity implements OnClickListener {
     // Debugging
     private static final String TAG = "Main";
@@ -22,6 +25,8 @@ public class MainActivity extends Activity implements OnClickListener {
     // Intent request code
     private static final int REQUEST_CONNECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
+    private static final int SERVER_SIDE = 1;
+    private static final int CLIENT_SIDE = 2;
 
     // permission
     int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 1;
@@ -30,6 +35,8 @@ public class MainActivity extends Activity implements OnClickListener {
     int MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN = 1;
     // Layout
     private Button btn_Connect;
+    private Button btn_Server;
+    private Button btn_Send;
     private TextView txt_Result;
 
     private BluetoothService btService = null;
@@ -37,13 +44,20 @@ public class MainActivity extends Activity implements OnClickListener {
     // Database
     private DBHandler mDBOpenHandler;
 
-    private final Handler mHandler = new Handler() {
+    int test_int = 0;
 
+    /**
+     * The handler that gets information back from the BluetoothService
+     */
+    private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            super.handleMessage(msg);
+            switch(msg.what) {
+                case BluetoothService.MESSAGE_READ:
+                    txt_Result.setText((String)msg.obj);
+                    break;
+            }
         }
-
     };
 
     @Override
@@ -77,9 +91,13 @@ public class MainActivity extends Activity implements OnClickListener {
 
         // Main Layout
         btn_Connect = (Button) findViewById(R.id.btn_connect);
+        btn_Server = (Button) findViewById(R.id.btn_server);
+        btn_Send = (Button) findViewById(R.id.btn_send);
         txt_Result = (TextView) findViewById(R.id.txt_result);
 
         btn_Connect.setOnClickListener(this);
+        btn_Server.setOnClickListener(this);
+        btn_Send.setOnClickListener(this);
 
         // create BluetoothService
         if(btService == null) {
@@ -88,15 +106,40 @@ public class MainActivity extends Activity implements OnClickListener {
 
         mDBOpenHandler = new DBHandler(this);
         mDBOpenHandler.open();
+
+        PackageManager pkgMan = getPackageManager();
+        if (pkgMan.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            Log.e("LHC", "it supports BLE");
+        } else {
+            Log.e("LHC", "it does not support BLE");
+        }
     }
 
     @Override
     public void onClick(View v) {
-        if(btService.getDeviceState()) {
-            // If the device supports bluetooth function
-            btService.enableBluetooth();
-        } else {
-            finish();
+        switch (v.getId()) {
+            case R.id.btn_connect:
+                if(btService.getDeviceState()) {
+                    // If the device supports bluetooth function
+                    btService.enableBluetooth(CLIENT_SIDE);
+                } else {
+                    finish();
+                }
+                break;
+            case R.id.btn_server:
+                if(btService.getDeviceState()) {
+                    // If the device supports bluetooth function
+                    btService.enableBluetooth(SERVER_SIDE);
+                } else {
+                    finish();
+                }
+                break;
+            case R.id.btn_send:
+                try {
+                    btService.write((byte[])("test"+Integer.toString(test_int++)+"\n").getBytes("UTF-8"));
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
         }
     }
 

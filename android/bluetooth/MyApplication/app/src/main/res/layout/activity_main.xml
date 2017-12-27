@@ -8,9 +8,9 @@
         android:id="@+id/btn_connect"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
         android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="174dp"
         android:text="연결" />
 
     <TextView
@@ -18,5 +18,23 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/btn_connect"
-        android:text="" />
+        android:text="Hi" />
+
+    <Button
+        android:id="@+id/btn_server"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/btn_connect"
+        android:layout_toLeftOf="@+id/btn_connect"
+        android:layout_toStartOf="@+id/btn_connect"
+        android:text="Server" />
+
+    <Button
+        android:id="@+id/btn_send"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_toLeftOf="@+id/btn_server"
+        android:layout_toStartOf="@+id/btn_server"
+        android:text="send_msg" />
 </RelativeLayout>

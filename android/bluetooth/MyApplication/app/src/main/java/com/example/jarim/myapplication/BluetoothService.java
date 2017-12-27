@@ -10,15 +10,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.UUID;
 import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -26,26 +24,42 @@ import android.util.Log;
 import static java.sql.Types.NULL;
 
 public class BluetoothService {
+    // Message types sent from the BluetoothChatService Handler
+    public static final int MESSAGE_STATE_CHANGE = 1;
+    public static final int MESSAGE_READ = 2;
+    public static final int MESSAGE_WRITE = 3;
+    public static final int MESSAGE_DEVICE_NAME = 4;
+    public static final int MESSAGE_TOAST = 5;
+
+    // Key names received from the BluetoothChatService Handler
+    public static final String DEVICE_NAME = "device_name";
+    public static final String TOAST = "toast";
+
     // Debugging
     private static final String TAG = "BluetoothService";
 
     // Intent request code
     private static final int REQUEST_CONNECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
+    private static final int SERVER_SIDE = 1;
+    private static final int CLIENT_SIDE = 2;
+
 
     // RFCOMM Protocol
     private static final UUID MY_UUID = UUID
-            .fromString("00001101-0000-1000-8000-00805F9B34FB");
+            .fromString("8ce255c0-200a-11e0-ac64-0800200c9a66");
 
     private BluetoothAdapter btAdapter;
 
     private Activity mActivity;
     private Handler mHandler;
 
-    private ConnectThread mConnectThread; // 변수명 다시
-    private ConnectedThread mConnectedThread; // 변수명 다시
+    private ConnectThread mConnectThread; // a thread is being used for connection
+    private ConnectedThread mConnectedThread; // a thread is used for communicate
+    private BtServerThread mServerThread;
 
     private int mState;
+    private int mNewState;
 
     // 상태를 나타내는 상태 변수
     private static final int STATE_NONE = 0; // we're doing nothing
@@ -60,6 +74,8 @@ public class BluetoothService {
     public BluetoothService(Activity ac, Handler h) {
         mActivity = ac;
         mHandler = h;
+
+        mState = STATE_NONE;
 
         // BluetoothAdapter 얻기
         btAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -80,17 +96,35 @@ public class BluetoothService {
     }
 
     /**
+     * Update UI title according to the current state of the chat connection
+     */
+    private synchronized void updateUserInterface(String received_test) {
+        mState = getState();
+        Log.d(TAG, "updateUserInterfaceTitle() " + mNewState + " -> " + mState);
+        mNewState = mState;
+
+        // Give the new state to the Handler so the UI Activity can update
+        Message m = mHandler.obtainMessage(MESSAGE_READ);
+        m.obj = (Object) received_test;
+        mHandler.sendMessage(m);
+    }
+
+    /**
      * Check the enabled Bluetooth
      */
-    public void enableBluetooth() {
+    public void enableBluetooth(int dev_type) {
         Log.i(TAG, "Check the enabled Bluetooth");
 
-        if (btAdapter.isEnabled()) {
+        if (btAdapter.isEnabled() && dev_type ==  CLIENT_SIDE) {
             // 기기의 블루투스 상태가 On인 경우
-            Log.d(TAG, "Bluetooth Enable Now");
+            Log.d(TAG, "Bluetooth Enable Now: Client Side");
 
             // Next Step
             scanDevice();
+        } else if (btAdapter.isEnabled() && dev_type == SERVER_SIDE) {
+            Log.d(TAG, "Bluetooth Enable Now: ServerSide");
+
+            startServer();
         } else {
             // 기기의 블루투스 상태가 Off인 경우
             Log.d(TAG, "Bluetooth Enable Request");
@@ -129,6 +163,11 @@ public class BluetoothService {
     // Bluetooth 상태 get
     public synchronized int getState() {
         return mState;
+    }
+
+    public synchronized  void startServer() {
+        mServerThread = new BtServerThread();
+        mServerThread.start();
     }
 
     public synchronized void start() {
@@ -186,18 +225,19 @@ public class BluetoothService {
         Log.d(TAG, "connected");
 
         // Reset the threads @{
-        if (mConnectThread == null) {
-
-        } else {
+        if (mConnectThread != null) {
             mConnectThread.cancel();
             mConnectThread = null;
         }
 
-        if (mConnectedThread == null) {
-
-        } else {
+        if (mConnectedThread != null) {
             mConnectedThread.cancel();
             mConnectedThread = null;
+        }
+
+        if (mServerThread != null) {
+            mServerThread.cancel();
+            mServerThread = null;
         }
         // @}
 
@@ -223,6 +263,11 @@ public class BluetoothService {
             mConnectedThread = null;
         }
 
+        if (mServerThread != null) {
+            mServerThread.cancel();
+            mServerThread = null;
+        }
+
         setState(STATE_NONE);
     }
 
@@ -233,17 +278,18 @@ public class BluetoothService {
             if (mState != STATE_CONNECTED)
                 return;
             r = mConnectedThread;
-        } // Perform the write unsynchronized r.write(out); }
+        } // Perform the write unsynchronized
+        r.write(out);
     }
 
-    // 연결 실패했을때
+    // Fail to connect
     private void connectionFailed() {
-        setState(STATE_LISTEN);
+        setState(STATE_NONE);
     }
 
-    // 연결을 잃었을 때
+    // Lost to connect
     private void connectionLost() {
-        setState(STATE_LISTEN);
+        setState(STATE_NONE);
 
     }
 
@@ -257,6 +303,7 @@ public class BluetoothService {
 
             // 디바이스 정보를 얻어서 BluetoothSocket 생성
             try {
+                /*
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
                     tmp = device.createInsecureRfcommSocketToServiceRecord(MY_UUID);
                     Log.i("LHC", "SDK VERSION IS LOWER THAN JELLY BEAN, ret code"+tmp.toString());
@@ -266,16 +313,13 @@ public class BluetoothService {
                             .invoke(device, 1);
                     Log.i("LHC", "SDK VERSION IS EQUAL AND HIGHER THAN JELLY BEAN, ret code"+tmp.toString());
                 }
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
+                */
+                tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
             } catch (IOException e) {
                 e.printStackTrace();
             }
             mmSocket = tmp;
+            setState(STATE_CONNECTING);
         }
 
         public void run() {
@@ -357,6 +401,7 @@ public class BluetoothService {
 
             mmInStream = tmpIn;
             mmOutStream = tmpOut;
+            setState(STATE_CONNECTED);
         }
 
         public void run() {
@@ -365,34 +410,16 @@ public class BluetoothService {
             int bytes;
             String sensor_val; // Sensor string stream that comes from Arduino
 
-            int test_idx = 0;
-            byte[] wr_buffer = new byte[1024];
-
-            /*
-            while (true) {
-                test_idx ++;
-                String test_str = Integer.toString(test_idx);
-                try {
-                    wr_buffer = test_str.getBytes("UTF-8");
-                    write(wr_buffer);
-                    Log.e("LHC", "send message:"+test_str);
-                } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                }
-                if (test_idx == 10000) test_idx = 0;
-            }
-            */
-
-/*
             // Keep listening to the InputStream while connection
-            while (true) {
+            while (mState == STATE_CONNECTED) {
                 Log.i(TAG, "Loop is started");
                 // ** get byte stream values from Arduino
                 try {
-                    if ((bytes = mmInStream.read(buffer)) == NULL) {
+                    if ((bytes = mmInStream.read(buffer)) != NULL) {
                         // convert byte stream to String object
                         sensor_val = new String(buffer, "UTF-8");
                         Log.e(TAG, "GET MSG: " + sensor_val);
+                        updateUserInterface(sensor_val);
                     } else {
                         Log.e(TAG, "NO MESSAGE");
                     }
@@ -400,14 +427,13 @@ public class BluetoothService {
                     e.printStackTrace();
                 }
             }
-            */
         }
 
         public void write(byte[] buffer) {
             try {
                 // 값을 쓰는 부분(값을 보낸다)
                 mmOutStream.write(buffer);
-
+                Log.e("LHC", "Success to send msg:"+buffer.toString());
             } catch (IOException e) {
                 Log.e(TAG, "Exception during write", e);
             }
@@ -422,4 +448,107 @@ public class BluetoothService {
         }
     }
 
+    /// Bluetooth Server Portion
+    /// @{
+
+    private class BtServerThread extends Thread {
+        private final BluetoothServerSocket mmServerSocket;
+
+        public BtServerThread () {
+            // Use a temporary object that is later assigned to mmServerSoccket
+            // Because mmServerSocket is final
+            BluetoothServerSocket tmp = null;
+            try {
+                // UUID is the app's UUID string, also used by tghe client code
+                // What are the insecure and secure?
+                tmp = btAdapter.listenUsingRfcommWithServiceRecord("StickEyeServer", MY_UUID);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            mmServerSocket = tmp;
+            mState = STATE_LISTEN;
+        }
+
+        public void run() {
+            BluetoothSocket socket = null;
+            InputStream mmInStream = null;
+            OutputStream mmOutStream = null;
+            // Keep listening until exception occurs or a socket is returned
+            Log.d("LHC", "BEGIN mAcceptThread" + this + ", state:"+BluetoothService.this.getState());
+
+            while (mState != STATE_CONNECTED) {
+                Log.e("LHC", "starts to listen");
+                try {
+                    Log.e("LHC", "wait for a socket connection");
+                    socket = mmServerSocket.accept();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.e("LHC", "server connection failed");
+                    break;
+                }
+                Log.e("LHC", "accepted");
+
+                // If a connection was accepted
+                if (socket != null) {
+                    // Do work to manage the connection (in a separate thread)
+                    Log.e("LHC", "server connection succeed");
+                    synchronized (BluetoothService.this) {
+                        switch (mState) {
+                            case STATE_LISTEN:
+                            case STATE_CONNECTING:
+                                // Situation is normal. Start the connected thread.
+                                connected(socket, socket.getRemoteDevice());
+                                break;
+                            case STATE_NONE:
+                            case STATE_CONNECTED:
+                                // Either not ready or already connected. Terminate new socket.
+                                try {
+                                    socket.close();
+                                } catch (IOException e) {
+                                    Log.e("LHC", "Could not close the socket", e);
+                                }
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         *  Will cancel the listening socket, and cause the thread to finish
+         */
+        public void cancel() {
+            try {
+                mmServerSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.e("LHC", "close() of server failed", e);
+            }
+        }
+
+                        /*
+                        try {
+                            mmInStream = socket.getInputStream();
+                            mmOutStream = socket.getOutputStream();
+
+                            int test_idx = 0;
+                            byte[] wr_buffer = new byte[1024];
+                            while (true) {
+                                test_idx++;
+                                String test_str = Integer.toString(test_idx);
+                                wr_buffer = test_str.getBytes("UTF-8");
+                                write(wr_buffer);
+                                Log.e("LHC", "send message:" + test_str);
+                                if (test_idx == 10000) test_idx = 0;
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                    */
+    }
+
+    /// @}
+    /// End of Bluetooth server
 }
