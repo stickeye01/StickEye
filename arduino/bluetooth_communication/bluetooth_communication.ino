@@ -1,13 +1,13 @@
  #include <SoftwareSerial.h>
 
 
-int blue_Tx = 9;  //블루투스 모듈의 T(Transmitt)x를 Digital pin 9번에 연결
-int blue_Rx = 10;  //블루투스 모듈의 R(Receive)x를 Digital pin 10번에 연결
+int blue_Tx = 2;  //블루투스 모듈의 T(Transmitt)x를 Digital pin 9번에 연결
+int blue_Rx = 3;  //블루투스 모듈의 R(Receive)x를 Digital pin 10번에 연결
 int led_pin = 13;
 //00:21:13:01:51:5D//??
 
-byte data;
-uint8_t buffer[1024];
+char data;
+char buffer[] = {'\r','m','s','g','\n'};
 int index;
 SoftwareSerial BTSerial(blue_Tx, blue_Rx);  //쓰기,읽기
 /*안드로이드에서 전송 된 데이터는 블루투스 모듈로 수신되면 
@@ -24,28 +24,39 @@ SoftwareSerial BTSerial(blue_Tx, blue_Rx);  //쓰기,읽기
 *초기 접속시에는 비밀번호 입력
 */
 void setup(){
-  BTSerial.begin(9600);
-  Serial.begin(9600);
+  /*
+   * 문자(1byte)을 주고 받기 위해서는 Baurate 속도를 1200
+   * 1bit 전송시에는 9600
+   */
+  BTSerial.begin(1200);
+  Serial.begin(1200);
   index = 0;
  
 }
 
 void loop(){
-  index = 0;
       /*Serial 창에 문자가 한개 이상 입력 될 경우 
      * 연결된 Bluetooth 기기로 문자 전송.
      * PC(Serial 창) -> 아두이노 -> 블루투스 모듈 -> 안드로이드
      */
   if((Serial.available())>0){ 
-       uint8_t d  = Serial.read();
-       //buffer[index++] = d;
-      
-       Serial.print("start to send msg : ");
-       Serial.println(d,BIN);
+    char data = (char)Serial.read();
+    delay(1);
+    if(data == '0'){ //이벤트 발생 시
+      index = 0;
+      while(index < sizeof(buffer)){
+        BTSerial.print(buffer[index++]);
+        delay(8); 
+        /*1bit 당 1초 delay를 줌.
+         * 현재는 8bit를 print 하기 때문에
+        */    
+      }
+      // 초기화
        BTSerial.flush();
-       BTSerial.println(d);
-       delay(1);     
+       index = 0;
     }
+  }
+}
     /*
     data = B10010;
     BTSerial.println(Serial.read());
@@ -53,9 +64,6 @@ void loop(){
      BTSerial.println("abcdef");
      i++;
   } */
-
-  
-}
   /*
   //
   while (BTSerial.available()){
