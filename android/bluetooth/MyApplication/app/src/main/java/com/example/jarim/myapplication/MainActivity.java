@@ -33,12 +33,14 @@ public class MainActivity extends Activity implements OnClickListener {
     int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     int MY_PERMISSIONS_REQUEST_BLUETOOTH = 1;
     int MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN = 1;
+
     // Layout
     private Button btn_Connect;
     private Button btn_Server;
     private Button btn_Send;
     private TextView txt_Result;
 
+    // Bluetooth
     private BluetoothService btService = null;
 
     // Database
@@ -46,8 +48,10 @@ public class MainActivity extends Activity implements OnClickListener {
 
     int test_int = 0;
 
-    /**
-     * The handler that gets information back from the BluetoothService
+    /*
+     * Check whether Bluetooth network is working or not.
+     *
+     * Description: The handler that gets information back from the BluetoothService.
      */
     private final Handler mHandler = new Handler() {
         @Override
@@ -66,16 +70,7 @@ public class MainActivity extends Activity implements OnClickListener {
         Log.e(TAG, "onCreate");
         setContentView(R.layout.activity_main);
 
-        //
-        // Android Permissions
-        // Since android versions that are higher than 6.0 needs to specify and check permissions in
-        // code section.
-        // ****
-        // ACCESS_COARSE_LOCATION: wifi permission for coarse-location
-        // ACCESS_FINE_LOCATION: wifi permission for fine-location
-        // BLUETOOTH: bluetooth permission
-        // BLUETOOTH_ADMIN: bluetooth admin permission
-        //
+        // Permission
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
                 MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
@@ -94,12 +89,10 @@ public class MainActivity extends Activity implements OnClickListener {
         btn_Server = (Button) findViewById(R.id.btn_server);
         btn_Send = (Button) findViewById(R.id.btn_send);
         txt_Result = (TextView) findViewById(R.id.txt_result);
-
         btn_Connect.setOnClickListener(this);
         btn_Server.setOnClickListener(this);
         btn_Send.setOnClickListener(this);
 
-        // create BluetoothService
         if(btService == null) {
             btService = new BluetoothService(this, mHandler);
         }
@@ -107,20 +100,21 @@ public class MainActivity extends Activity implements OnClickListener {
         mDBOpenHandler = new DBHandler(this);
         mDBOpenHandler.open();
 
-        PackageManager pkgMan = getPackageManager();
-        if (pkgMan.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Log.e("LHC", "it supports BLE");
-        } else {
-            Log.e("LHC", "it does not support BLE");
-        }
+        //
+        //PackageManager pkgMan = getPackageManager();
+        //if (pkgMan.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+        //    Log.e("LHC", "it supports BLE");
+        //} else {
+        //    Log.e("LHC", "it does not support BLE");
+        //}
     }
 
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
+            // Two options: client and server side.
             case R.id.btn_connect:
                 if(btService.getDeviceState()) {
-                    // If the device supports bluetooth function
                     btService.enableBluetooth(CLIENT_SIDE);
                 } else {
                     finish();
@@ -128,12 +122,12 @@ public class MainActivity extends Activity implements OnClickListener {
                 break;
             case R.id.btn_server:
                 if(btService.getDeviceState()) {
-                    // If the device supports bluetooth function
                     btService.enableBluetooth(SERVER_SIDE);
                 } else {
                     finish();
                 }
                 break;
+            // Send messages to other devices
             case R.id.btn_send:
                 try {
                     btService.write((byte[])("test"+Integer.toString(test_int++)+"\n").getBytes("UTF-8"));
@@ -144,22 +138,18 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.d(TAG, "onActivityResult " + resultCode);
+        Log.d(TAG, "MainActivity: onActivityResult(" + resultCode + ")");
 
         switch (requestCode) {
-
             case REQUEST_CONNECT_DEVICE:
+                // Scan devices and
                 if(resultCode == Activity.RESULT_OK){
                     btService.getDeviceInfo(data);
                 }
-
-
+                break;
             case REQUEST_ENABLE_BT:
                 // When the request to enable Bluetooth returns
-                if (resultCode == Activity.RESULT_OK) {
-
-                } else {
-
+                if (resultCode != Activity.RESULT_OK) {
                     Log.d(TAG, "Bluetooth is not enabled");
                 }
                 break;

@@ -24,18 +24,17 @@ import android.util.Log;
 import static java.sql.Types.NULL;
 
 public class BluetoothService {
-    // Message types sent from the BluetoothChatService Handler
+    // Message types that are sent by the BluetoothChatService handler
     public static final int MESSAGE_STATE_CHANGE = 1;
     public static final int MESSAGE_READ = 2;
     public static final int MESSAGE_WRITE = 3;
     public static final int MESSAGE_DEVICE_NAME = 4;
     public static final int MESSAGE_TOAST = 5;
 
-    // Key names received from the BluetoothChatService Handler
+    // Key names received from the BluetoothChatService handler
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
 
-    // Debugging
     private static final String TAG = "BluetoothService";
 
     // Intent request code
@@ -43,7 +42,6 @@ public class BluetoothService {
     private static final int REQUEST_ENABLE_BT = 2;
     private static final int SERVER_SIDE = 1;
     private static final int CLIENT_SIDE = 2;
-
 
     // RFCOMM Protocol
     private static final UUID MY_UUID = UUID
@@ -61,72 +59,60 @@ public class BluetoothService {
     private int mState;
     private int mNewState;
 
-    // 상태를 나타내는 상태 변수
+    // State types
     private static final int STATE_NONE = 0; // we're doing nothing
     private static final int STATE_LISTEN = 1; // now listening for incoming
-    // connections
     private static final int STATE_CONNECTING = 2; // now initiating an outgoing
-    // connection
     private static final int STATE_CONNECTED = 3; // now connected to a remote
-    // device
 
-    // Constructors
     public BluetoothService(Activity ac, Handler h) {
         mActivity = ac;
         mHandler = h;
-
         mState = STATE_NONE;
-
-        // BluetoothAdapter 얻기
         btAdapter = BluetoothAdapter.getDefaultAdapter();
     }
 
+    /*
+     * Check whether Bluetooth is available or not.
+     */
     public boolean getDeviceState() {
-        Log.i(TAG, "Check the Bluetooth support");
-
         if (btAdapter == null) {
             Log.d(TAG, "Bluetooth is not available");
-
             return false;
         } else {
             Log.d(TAG, "Bluetooth is available");
-
             return true;
         }
     }
 
-    /**
-     * Update UI title according to the current state of the chat connection
+    /*
+     * Update UI title according to the current state of the chat connection.
      */
     private synchronized void updateUserInterface(String received_test) {
         mState = getState();
-        Log.d(TAG, "updateUserInterfaceTitle() " + mNewState + " -> " + mState);
+        Log.d(TAG, "updateUserInterfaceTitle(): " + mNewState + " -> " + mState);
         mNewState = mState;
 
-        // Give the new state to the Handler so the UI Activity can update
+        // Give the new state to the Handler so the UI Activity can be updated.
         Message m = mHandler.obtainMessage(MESSAGE_READ);
         m.obj = (Object) received_test;
         mHandler.sendMessage(m);
     }
 
-    /**
-     * Check the enabled Bluetooth
+    /*
+     * Check the enabled Bluetooth.
      */
     public void enableBluetooth(int dev_type) {
         Log.i(TAG, "Check the enabled Bluetooth");
 
         if (btAdapter.isEnabled() && dev_type ==  CLIENT_SIDE) {
-            // 기기의 블루투스 상태가 On인 경우
             Log.d(TAG, "Bluetooth Enable Now: Client Side");
 
-            // Next Step
             scanDevice();
         } else if (btAdapter.isEnabled() && dev_type == SERVER_SIDE) {
-            Log.d(TAG, "Bluetooth Enable Now: ServerSide");
 
             startServer();
         } else {
-            // 기기의 블루투스 상태가 Off인 경우
             Log.d(TAG, "Bluetooth Enable Request");
 
             Intent i = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -134,19 +120,23 @@ public class BluetoothService {
         }
     }
 
-    //디바이스스캔
+    /*
+     * Scan devices.
+     */
     public void scanDevice() {
-        Log.d(TAG, "Scan Device");
+        Log.d(TAG, "Scan Device....");
 
         Intent serverIntent = new Intent(mActivity, DeviceListActivity.class);
+        // mActivity --> DeviceListActivity --> mActivity
         mActivity.startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
     }
 
+    /*
+     * Get the device's MAC address and try to connect it.
+     */
     public void getDeviceInfo(Intent data) {
-        // Get the device MAC address
         String address = data.getExtras().getString(
                 DeviceListActivity.EXTRA_DEVICE_ADDRESS);
-        // Get the BluetoothDevice object
         BluetoothDevice device = btAdapter.getRemoteDevice(address);
 
         Log.d(TAG, "Get Device Info \n" + "address : " + address);
@@ -154,13 +144,47 @@ public class BluetoothService {
         connect(device);
     }
 
-    // Bluetooth 상태 set
+    /*
+     * Remove current executing threads and initialize all threads.
+     */
+    public synchronized void connect(BluetoothDevice device) {
+        Log.d(TAG, "connect to: " + device);
+
+        if (mState == STATE_CONNECTING) {
+            if (mConnectThread != null) {
+                mConnectThread.cancel();
+                mConnectThread = null;
+            }
+        }
+
+        if (mConnectedThread != null) {
+            mConnectedThread.cancel();
+            mConnectedThread = null;
+        }
+
+        if (mServerThread != null) {
+            mServerThread.cancel();
+            mServerThread = null;
+        }
+
+        // Start a thread that connects with the given device
+        mConnectThread = new ConnectThread(device);
+        mConnectThread.start();
+
+        setState(STATE_CONNECTING);
+    }
+
+    /*
+     * Set states of the device.
+     */
     private synchronized void setState(int state) {
         Log.d(TAG, "setState() " + mState + " -> " + state);
         mState = state;
     }
 
-    // Bluetooth 상태 get
+    /*
+     * Get the device state.
+     */
     public synchronized int getState() {
         return mState;
     }
@@ -170,61 +194,11 @@ public class BluetoothService {
         mServerThread.start();
     }
 
-    public synchronized void start() {
-        Log.d(TAG, "start");
+    /*
+     * Nullify all the threads.
+     */
+    public synchronized void initialize() {
 
-        // Cancel any thread attempting to make a connection
-        if (mConnectThread == null) {
-
-        } else {
-            mConnectThread.cancel();
-            mConnectThread = null;
-        }
-
-        // Cancel any thread currently running a connection
-        if (mConnectedThread == null) {
-
-        } else {
-            mConnectedThread.cancel();
-            mConnectedThread = null;
-        }
-    }
-
-    // ConnectThread 초기화 device의 모든 연결 제거
-    public synchronized void connect(BluetoothDevice device) {
-        Log.d(TAG, "connect to: " + device);
-
-        // Cancel any thread attempting to make a connection
-        if (mState == STATE_CONNECTING) {
-            if (mConnectThread == null) {
-
-            } else {
-                mConnectThread.cancel();
-                mConnectThread = null;
-            }
-        }
-
-        // Cancel any thread currently running a connection
-        if (mConnectedThread == null) {
-
-        } else {
-            mConnectedThread.cancel();
-            mConnectedThread = null;
-        }
-
-        // Start the thread to connect with the given device
-        mConnectThread = new ConnectThread(device);
-
-        mConnectThread.start();
-        setState(STATE_CONNECTING);
-    }
-
-    // ConnectedThread 초기화
-    public synchronized void connected(BluetoothSocket socket,
-                                       BluetoothDevice device) {
-        Log.d(TAG, "connected");
-
-        // Reset the threads @{
         if (mConnectThread != null) {
             mConnectThread.cancel();
             mConnectThread = null;
@@ -239,19 +213,40 @@ public class BluetoothService {
             mServerThread.cancel();
             mServerThread = null;
         }
-        // @}
+    }
 
-        // Start to next phase by generating mConnectedThread
-        // It will perform actual Bluetooth networking
+    /*
+     * Nullify all the threads and start to connect with the device.
+     */
+    public synchronized void connected(BluetoothSocket socket,
+                                       BluetoothDevice device) {
+        if (mConnectThread != null) {
+            mConnectThread.cancel();
+            mConnectThread = null;
+        }
+
+        if (mConnectedThread != null) {
+            mConnectedThread.cancel();
+            mConnectedThread = null;
+        }
+
+        if (mServerThread != null) {
+            mServerThread.cancel();
+            mServerThread = null;
+        }
+
+        // Start to next phase by generating mConnectedThread.
+        // It is going to perform actual Bluetooth networking.
         mConnectedThread = new ConnectedThread(socket);
         mConnectedThread.start();
 
         setState(STATE_CONNECTED);
     }
 
-    // 모든 thread stop
+    /*
+     * Stop and nullify all the threads
+     */
     public synchronized void stop() {
-        Log.d(TAG, "stop");
 
         if (mConnectThread != null) {
             mConnectThread.cancel();
@@ -271,28 +266,26 @@ public class BluetoothService {
         setState(STATE_NONE);
     }
 
-    // 값을 쓰는 부분(보내는 부분)
-    public void write(byte[] out) { // Create temporary object
+    /*
+     * Write out data through socket output stream.
+     * (Send data to other devices if the connection is set)
+     */
+    public void write(byte[] out) {
         ConnectedThread r; // Synchronize a copy of the ConnectedThread
         synchronized (this) {
             if (mState != STATE_CONNECTED)
                 return;
             r = mConnectedThread;
-        } // Perform the write unsynchronized
+        }
         r.write(out);
     }
 
-    // Fail to connect
     private void connectionFailed() {
         setState(STATE_NONE);
     }
+    private void connectionLost() { setState(STATE_NONE); }
 
-    // Lost to connect
-    private void connectionLost() {
-        setState(STATE_NONE);
-
-    }
-
+    // THREAD THAT WILL BE USED WHILE CONNECTING .. @{
     private class ConnectThread extends Thread {
         private final BluetoothSocket mmSocket;
         private final BluetoothDevice mmDevice;
@@ -301,7 +294,7 @@ public class BluetoothService {
             mmDevice = device;
             BluetoothSocket tmp = null;
 
-            // 디바이스 정보를 얻어서 BluetoothSocket 생성
+            // Create Bluetooth socket.
             try {
                 /*
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1) {
@@ -320,27 +313,27 @@ public class BluetoothService {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
             mmSocket = tmp;
             setState(STATE_CONNECTING);
         }
 
         public void run() {
-            Log.i(TAG, "BEGIN mConnectThread");
+            Log.i(TAG, "Begin mConnectThread...");
             setName("ConnectThread");
 
-            // Before trying connection, it always stops device searching
+            // Before trying connection, it always needs to stop device searching process.
             // This is because device searching takes a lot of energy and makes the application slow.
             btAdapter.cancelDiscovery();
 
-            // Try to connect BluetoothSocket
             try {
                 mmSocket.connect();
-                Log.d(TAG, "Connection successes");
+                Log.d(TAG, "Bluetooth Socket Connection succeeds!");
             } catch (IOException e) {
-                connectionFailed(); // 연결 실패시 불러오는 메소드
-                Log.d(TAG, "Connection fails");
+                connectionFailed();
+                Log.d(TAG, "Bluetooth Socket Connection fails!");
                 e.printStackTrace();
-                // socket을 닫는다.
+
                 try {
                     mmSocket.close();
                 } catch (IOException e2) {
@@ -348,10 +341,7 @@ public class BluetoothService {
                             "Unable to close socket when connection failures",
                             e2);
                 }
-
-                // Restart Bluetooth connection phase
-                // In the start() function, this additional and failed thread will be removed.
-                BluetoothService.this.start();
+                BluetoothService.this.initialize();
                 return;
             }
 
@@ -381,7 +371,9 @@ public class BluetoothService {
             }
         }
     }
+    // @} THREAD THAT WILL BE USED WHILE CONNECTING ..
 
+    // THREAD THAT WILL BE USED AFTER CONNECTING .. @{
     private class ConnectedThread extends Thread {
         private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
@@ -389,11 +381,12 @@ public class BluetoothService {
 
         public ConnectedThread(BluetoothSocket socket) {
             Log.d(TAG, "create ConnectedThread");
+
             mmSocket = socket;
+
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
 
-            // Get in/out streams for Bluetooth networking
             try {
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
@@ -407,18 +400,16 @@ public class BluetoothService {
         }
 
         public void run() {
-            Log.i(TAG, "BEGIN mConnectedThread");
+            Log.i(TAG, "Begin mConnectedThread...");
             byte[] buffer = new byte[1024];
             int bytes;
-            String sensor_val; // Sensor string stream that comes from Arduino
+            String sensor_val; // Sensor string stream that comes from Arduino.
 
             // Keep listening to the InputStream while connection
             while (mState == STATE_CONNECTED) {
-                Log.i(TAG, "Loop is started");
-                // ** get byte stream values from Arduino
+                Log.i(TAG, "mConnectedThread: waiting is started");
                 try {
                     if ((bytes = mmInStream.read(buffer)) != NULL) {
-                        // convert byte stream to String object
                         sensor_val = new String(buffer, "UTF-8");
                         Log.e(TAG, "GET MSG: " + sensor_val);
                         updateUserInterface(sensor_val);
@@ -431,13 +422,16 @@ public class BluetoothService {
             }
         }
 
+        /*
+         * Write data onto write output stream.
+         * (it means that we can send data to other devices)
+         */
         public void write(byte[] buffer) {
             try {
-                // 값을 쓰는 부분(값을 보낸다)
                 mmOutStream.write(buffer);
-                Log.e("LHC", "Success to send msg:"+buffer.toString());
+                Log.e("LHC", "Succeed to send msg:"+buffer.toString());
             } catch (IOException e) {
-                Log.e(TAG, "Exception during write", e);
+                e.printStackTrace();
             }
         }
 
@@ -449,20 +443,17 @@ public class BluetoothService {
             }
         }
     }
+    // @} THREAD THAT WILL BE USED AFTER CONNECTING ..
 
-    /// Bluetooth Server Portion
-    /// @{
-
+    // SERVER SIDE THREAD .. @{
     private class BtServerThread extends Thread {
         private final BluetoothServerSocket mmServerSocket;
 
         public BtServerThread () {
-            // Use a temporary object that is later assigned to mmServerSoccket
-            // Because mmServerSocket is final
             BluetoothServerSocket tmp = null;
             try {
                 // UUID is the app's UUID string, also used by tghe client code
-                // What are the insecure and secure?
+                // What are the insecure and secure? [NEED TO SOLVE]
                 tmp = btAdapter.listenUsingRfcommWithServiceRecord("StickEyeServer", MY_UUID);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -476,39 +467,37 @@ public class BluetoothService {
             BluetoothSocket socket = null;
             InputStream mmInStream = null;
             OutputStream mmOutStream = null;
-            // Keep listening until exception occurs or a socket is returned
-            Log.d("LHC", "BEGIN mAcceptThread" + this + ", state:"+BluetoothService.this.getState());
+
+            Log.v("LHC", "BtServerThread: Begin mAcceptThread" + this + ", state:"+BluetoothService.this.getState());
 
             while (mState != STATE_CONNECTED) {
-                Log.e("LHC", "starts to listen");
+                Log.v("LHC", "BtServerThread: Start to listen");
                 try {
-                    Log.e("LHC", "wait for a socket connection");
+                    Log.v("LHC", "BtServerThread: Wait for a socket connection");
                     socket = mmServerSocket.accept();
                 } catch (IOException e) {
                     e.printStackTrace();
-                    Log.e("LHC", "server connection failed");
+                    Log.v("LHC", "BtServerThread: Server connection failed");
                     break;
                 }
-                Log.e("LHC", "accepted");
 
-                // If a connection was accepted
+
                 if (socket != null) {
-                    // Do work to manage the connection (in a separate thread)
-                    Log.e("LHC", "server connection succeed");
+                    Log.v("LHC", "BtServerThread: Socket connection succeeds");
                     synchronized (BluetoothService.this) {
                         switch (mState) {
                             case STATE_LISTEN:
                             case STATE_CONNECTING:
-                                // Situation is normal. Start the connected thread.
                                 connected(socket, socket.getRemoteDevice());
                                 break;
                             case STATE_NONE:
                             case STATE_CONNECTED:
-                                // Either not ready or already connected. Terminate new socket.
                                 try {
                                     socket.close();
                                 } catch (IOException e) {
-                                    Log.e("LHC", "Could not close the socket", e);
+                                    Log.v("LHC",
+                                            "BtServerThread: Could not close the socket",
+                                            e);
                                 }
                                 break;
                         }
@@ -517,9 +506,6 @@ public class BluetoothService {
             }
         }
 
-        /**
-         *  Will cancel the listening socket, and cause the thread to finish
-         */
         public void cancel() {
             try {
                 mmServerSocket.close();
@@ -528,29 +514,6 @@ public class BluetoothService {
                 Log.e("LHC", "close() of server failed", e);
             }
         }
-
-                        /*
-                        try {
-                            mmInStream = socket.getInputStream();
-                            mmOutStream = socket.getOutputStream();
-
-                            int test_idx = 0;
-                            byte[] wr_buffer = new byte[1024];
-                            while (true) {
-                                test_idx++;
-                                String test_str = Integer.toString(test_idx);
-                                wr_buffer = test_str.getBytes("UTF-8");
-                                write(wr_buffer);
-                                Log.e("LHC", "send message:" + test_str);
-                                if (test_idx == 10000) test_idx = 0;
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        break;
-                    */
     }
-
-    /// @}
-    /// End of Bluetooth server
+    // @} SERVER SIDE THREAD ..
 }
