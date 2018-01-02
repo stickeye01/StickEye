@@ -19,6 +19,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemClock;
 import android.util.Log;
 
 import static java.sql.Types.NULL;
@@ -30,12 +31,14 @@ public class BluetoothService {
     public static final int MESSAGE_WRITE = 3;
     public static final int MESSAGE_DEVICE_NAME = 4;
     public static final int MESSAGE_TOAST = 5;
+    public static final int MESSAGE_MAC_ID_CHANGE = 6;
 
     // Key names received from the BluetoothChatService handler
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
 
     private static final String TAG = "BluetoothService";
+    public static String EXTRA_DEVICE_ADDRESS = "device_address";
 
     // Intent request code
     private static final int REQUEST_CONNECT_DEVICE = 1;
@@ -65,6 +68,8 @@ public class BluetoothService {
     private static final int STATE_CONNECTING = 2; // now initiating an outgoing
     private static final int STATE_CONNECTED = 3; // now connected to a remote
 
+    private String address;
+
     public BluetoothService(Activity ac, Handler h) {
         mActivity = ac;
         mHandler = h;
@@ -86,16 +91,43 @@ public class BluetoothService {
     }
 
     /*
+     * Change UI state.
+     */
+    private String getStatusString(String data) {
+        int type = Integer.parseInt(data);
+        String resultStr = "NONE";
+        switch (type) {
+            case STATE_NONE:
+                return resultStr;
+            case STATE_CONNECTING:
+                resultStr = "Connecting...";
+                return resultStr;
+            case STATE_CONNECTED:
+                resultStr = "Connected!";
+                return resultStr;
+            case STATE_LISTEN:
+                resultStr = "Connected! and wait for data..";
+                return resultStr;
+        }
+
+        return resultStr;
+    }
+
+    /*
      * Update UI title according to the current state of the chat connection.
      */
-    private synchronized void updateUserInterface(String received_test) {
+    private synchronized void updateUserInterface(String data, int msg_type) {
         mState = getState();
         Log.d(TAG, "updateUserInterfaceTitle(): " + mNewState + " -> " + mState);
         mNewState = mState;
 
+        if (msg_type == MESSAGE_STATE_CHANGE) {
+            data = getStatusString(data);
+        }
+
         // Give the new state to the Handler so the UI Activity can be updated.
-        Message m = mHandler.obtainMessage(MESSAGE_READ);
-        m.obj = (Object) received_test;
+        Message m = mHandler.obtainMessage(msg_type);
+        m.obj = (Object) data;
         mHandler.sendMessage(m);
     }
 
@@ -126,9 +158,13 @@ public class BluetoothService {
     public void scanDevice() {
         Log.d(TAG, "Scan Device....");
 
+        /*
         Intent serverIntent = new Intent(mActivity, DeviceListActivity.class);
         // mActivity --> DeviceListActivity --> mActivity
         mActivity.startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
+        */
+        setMACID("08:D4:2B:2C:31:F5");
+        getDeviceInfo(address);
     }
 
     /*
@@ -140,6 +176,17 @@ public class BluetoothService {
         BluetoothDevice device = btAdapter.getRemoteDevice(address);
 
         Log.d(TAG, "Get Device Info \n" + "address : " + address);
+
+        connect(device);
+    }
+
+    /*
+     * Get the device's MAC address and try to connect it.
+     */
+    public void getDeviceInfo(String addr) {
+        BluetoothDevice device = btAdapter.getRemoteDevice(addr);
+
+        Log.d(TAG, "Get Device Info \n" + "address : " + addr);
 
         connect(device);
     }
@@ -174,12 +221,21 @@ public class BluetoothService {
         setState(STATE_CONNECTING);
     }
 
+    private void setMACID(String macId) {
+        address = macId;
+    }
+
+    private String getMACID() {
+        return address;
+    }
+
     /*
      * Set states of the device.
      */
     private synchronized void setState(int state) {
         Log.d(TAG, "setState() " + mState + " -> " + state);
         mState = state;
+        updateUserInterface(Integer.toString(mState), MESSAGE_STATE_CHANGE);
     }
 
     /*
@@ -314,6 +370,7 @@ public class BluetoothService {
                 e.printStackTrace();
             }
 
+            updateUserInterface(device.getAddress(), MESSAGE_MAC_ID_CHANGE);
             mmSocket = tmp;
             setState(STATE_CONNECTING);
         }
@@ -412,13 +469,26 @@ public class BluetoothService {
                     if ((bytes = mmInStream.read(buffer)) != NULL) {
                         sensor_val = new String(buffer, "UTF-8");
                         Log.e(TAG, "GET MSG: " + sensor_val);
-                        updateUserInterface(sensor_val);
+                        updateUserInterface(sensor_val, MESSAGE_READ);
                     } else {
                         Log.e(TAG, "NO MESSAGE");
                     }
                 } catch (IOException e) {
+                    connectionFailed();
+                    Log.d(TAG, "Bluetooth Socket Connection fails!");
                     e.printStackTrace();
+
+                    try {
+                        mmSocket.close();
+                    } catch (IOException e2) {
+                        Log.e(TAG,
+                                "Unable to close socket when connection failures",
+                                e2);
+                    }
+                    BluetoothService.this.initialize();
+                    return;
                 }
+                SystemClock.sleep(100);
             }
         }
 

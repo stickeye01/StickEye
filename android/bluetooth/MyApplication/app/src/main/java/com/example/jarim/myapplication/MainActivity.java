@@ -16,6 +16,8 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 
+import org.w3c.dom.Text;
+
 import java.io.UnsupportedEncodingException;
 
 public class MainActivity extends Activity implements OnClickListener {
@@ -39,6 +41,8 @@ public class MainActivity extends Activity implements OnClickListener {
     private Button btn_Server;
     private Button btn_Send;
     private TextView txt_Result;
+    private TextView txt_mac_id;
+    private TextView txt_conn_stats;
 
     // Bluetooth
     private BluetoothService btService = null;
@@ -59,6 +63,12 @@ public class MainActivity extends Activity implements OnClickListener {
             switch(msg.what) {
                 case BluetoothService.MESSAGE_READ:
                     txt_Result.setText((String)msg.obj);
+                    break;
+                case BluetoothService.MESSAGE_STATE_CHANGE:
+                    txt_conn_stats.setText((String)msg.obj);
+                    break;
+                case BluetoothService.MESSAGE_MAC_ID_CHANGE:
+                    txt_mac_id.setText((String)msg.obj);
                     break;
             }
         }
@@ -89,6 +99,8 @@ public class MainActivity extends Activity implements OnClickListener {
         btn_Server = (Button) findViewById(R.id.btn_server);
         btn_Send = (Button) findViewById(R.id.btn_send);
         txt_Result = (TextView) findViewById(R.id.txt_result);
+        txt_conn_stats = (TextView) findViewById(R.id.conn_stats);
+        txt_mac_id = (TextView) findViewById(R.id.mac_id);
         btn_Connect.setOnClickListener(this);
         btn_Server.setOnClickListener(this);
         btn_Send.setOnClickListener(this);
@@ -134,6 +146,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
+                break;
         }
     }
 
