@@ -38,11 +38,11 @@ public class MainActivity extends Activity implements OnClickListener {
 
     // Layout
     private Button btn_Connect;
-    private Button btn_Server;
     private Button btn_Send;
     private TextView txt_Result;
     private TextView txt_mac_id;
     private TextView txt_conn_stats;
+    private TextView txt_serv_stats;
 
     // Bluetooth
     private BluetoothService btService = null;
@@ -70,6 +70,9 @@ public class MainActivity extends Activity implements OnClickListener {
                 case BluetoothService.MESSAGE_MAC_ID_CHANGE:
                     txt_mac_id.setText((String)msg.obj);
                     break;
+                case BluetoothService.MESSAGE_SERVER_STATE:
+                    txt_serv_stats.setText((String)msg.obj);
+                    break;
             }
         }
     };
@@ -96,13 +99,12 @@ public class MainActivity extends Activity implements OnClickListener {
 
         // Main Layout
         btn_Connect = (Button) findViewById(R.id.btn_connect);
-        btn_Server = (Button) findViewById(R.id.btn_server);
         btn_Send = (Button) findViewById(R.id.btn_send);
         txt_Result = (TextView) findViewById(R.id.txt_result);
         txt_conn_stats = (TextView) findViewById(R.id.conn_stats);
         txt_mac_id = (TextView) findViewById(R.id.mac_id);
+        txt_serv_stats = (TextView) findViewById(R.id.server_stats);
         btn_Connect.setOnClickListener(this);
-        btn_Server.setOnClickListener(this);
         btn_Send.setOnClickListener(this);
 
         if(btService == null) {
@@ -119,6 +121,12 @@ public class MainActivity extends Activity implements OnClickListener {
         //} else {
         //    Log.e("LHC", "it does not support BLE");
         //}
+
+        if(btService.getDeviceState()) {
+            btService.enableBluetooth(SERVER_SIDE);
+        } else {
+            finish();
+        }
     }
 
     @Override
@@ -127,14 +135,9 @@ public class MainActivity extends Activity implements OnClickListener {
             // Two options: client and server side.
             case R.id.btn_connect:
                 if(btService.getDeviceState()) {
-                    btService.enableBluetooth(CLIENT_SIDE);
-                } else {
-                    finish();
-                }
-                break;
-            case R.id.btn_server:
-                if(btService.getDeviceState()) {
-                    btService.enableBluetooth(SERVER_SIDE);
+                    if (btService.getState() != BluetoothService.STATE_CONNECTED) {
+                        btService.enableBluetooth(CLIENT_SIDE);
+                    }
                 } else {
                     finish();
                 }

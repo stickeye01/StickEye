@@ -11,7 +11,7 @@
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentTop="true"
-        android:text="연결" />
+        android:text="Connect" />
 
     <TextView
         android:id="@+id/txt_result"
@@ -21,20 +21,59 @@
         android:text="Hi" />
 
     <Button
-        android:id="@+id/btn_server"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignBottom="@+id/btn_connect"
-        android:layout_toLeftOf="@+id/btn_connect"
-        android:layout_toStartOf="@+id/btn_connect"
-        android:text="Server" />
-
-    <Button
         android:id="@+id/btn_send"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_toLeftOf="@+id/btn_server"
-        android:layout_toStartOf="@+id/btn_server"
+        android:layout_toLeftOf="@+id/btn_connect"
+        android:layout_toStartOf="@+id/btn_connect"
         android:text="send_msg" />
+
+    <TextView
+        android:id="@+id/mac_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/txt_result"
+        android:text="Device Information is not saved."
+        android:textColor="@color/colorPrimary" />
+
+    <TextView
+        android:id="@+id/conn_stats_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/mac_id"
+        android:text="Connection Status:" />
+
+    <TextView
+        android:id="@+id/conn_stats"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/conn_stats_title"
+        android:layout_toEndOf="@+id/txt_result"
+        android:layout_toRightOf="@+id/txt_result"
+        android:text="Not activated"
+        android:textColor="@android:color/holo_red_dark" />
+
+    <TextView
+        android:id="@+id/server_stats_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/conn_stats"
+        android:text="Server Status:" />
+
+    <TextView
+        android:id="@+id/server_stats"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/conn_stats"
+        android:layout_alignStart="@+id/conn_stats"
+        android:layout_below="@+id/server_stats_title"
+        android:text="Not activated"
+        android:textColor="@android:color/holo_red_dark" />
 </RelativeLayout>
