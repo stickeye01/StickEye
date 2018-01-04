@@ -62,7 +62,7 @@ public class BluetoothService {
     private ConnectedThread mServerConnectedThread;
 
     private int mState;
-    private int mNewState;
+    private int mSState;
 
     // State types
     public static final int STATE_NONE = 0; // we're doing nothing
@@ -76,6 +76,7 @@ public class BluetoothService {
         mActivity = ac;
         mHandler = h;
         mState = STATE_NONE;
+        mSState = STATE_NONE;
         btAdapter = BluetoothAdapter.getDefaultAdapter();
     }
 
@@ -119,10 +120,6 @@ public class BluetoothService {
      * Update UI title according to the current state of the chat connection.
      */
     private synchronized void updateUserInterface(String data, int msg_type) {
-        mState = getState();
-        Log.d(TAG, "updateUserInterfaceTitle(): " + mNewState + " -> " + mState);
-        mNewState = mState;
-
         if (msg_type == MESSAGE_STATE_CHANGE) {
             data = getStatusString(data);
         }
@@ -240,9 +237,10 @@ public class BluetoothService {
      * Set states of the device.
      */
     private synchronized void setState(int state) {
-        Log.d(TAG, "setState() " + mState + " -> " + state);
+
+        Log.e("LHC", getStatusString(Integer.toString(mState))+"-->"+getStatusString(Integer.toString(state)));
         mState = state;
-        updateUserInterface(Integer.toString(mState), MESSAGE_STATE_CHANGE);
+        updateUserInterface(Integer.toString(state), MESSAGE_STATE_CHANGE);
     }
 
     /*
@@ -250,6 +248,21 @@ public class BluetoothService {
      */
     public synchronized int getState() {
         return mState;
+    }
+
+
+    /*
+     * Set server states of the device.
+     */
+    private synchronized void setSState(int state) {
+        mSState = state;
+    }
+
+    /*
+     * Get the server state.
+     */
+    public synchronized int getSState() {
+        return mSState;
     }
 
     public synchronized  void startServer() {
@@ -261,13 +274,9 @@ public class BluetoothService {
      * Nullify all the threads.
      */
     public synchronized void initialize() {
-
-        if (mState == STATE_CONNECTED) {
-            if (mConnectThread != null) {
-                Log.e("LHC", "Initialize(): ConnectThread is nullify");
-                mConnectThread.cancel();
-                mConnectThread = null;
-            }
+        if (mConnectThread != null) {
+            mConnectThread.cancel();
+            mConnectThread = null;
         }
 
         if (mConnectedThread != null) {
@@ -307,15 +316,13 @@ public class BluetoothService {
         // Start to next phase by generating mConnectedThread.
         // It is going to perform actual Bluetooth networking.
         if (side_type == CLIENT_SIDE) {
-            mConnectedThread = new ConnectedThread(socket);
+            mConnectedThread = new ConnectedThread(socket, CLIENT_SIDE);
             mConnectedThread.start();
         }
         else if (side_type == SERVER_SIDE && mServerConnectedThread == null) {
-            mServerConnectedThread = new ConnectedThread(socket);
+            mServerConnectedThread = new ConnectedThread(socket, SERVER_SIDE);
             mServerConnectedThread.start();
         }
-
-        setState(STATE_CONNECTED);
     }
 
     /*
@@ -360,12 +367,14 @@ public class BluetoothService {
         r.write(out);
     }
 
-    private void connectionFailed() {
+    private void connectionFailed(int threadType) {
+        Log.e("LHC", "connectionFailed()");
+        if (threadType == SERVER_SIDE)  setSState(STATE_NONE);
+        else setState(STATE_NONE);
 
-        Log.e("LHC", "connectionFailed()");setState(STATE_NONE);
+        BluetoothService.this.initialize();
+        BluetoothService.this.enableBluetooth(SERVER_SIDE);
     }
-    private void connectionLost() {
-        Log.e("LHC", "connectionLost()");setState(STATE_NONE); }
 
     // THREAD THAT WILL BE USED WHILE CONNECTING .. @{
     private class ConnectThread extends Thread {
@@ -417,21 +426,10 @@ public class BluetoothService {
                 Log.e(TAG, "Bluetooth Socket Connection succeeds!");
             } catch (IOException e) {
                 Log.e("LHC", "ConnectThread exception..");
-                connectionFailed();
                 Log.e(TAG, "ConnectThread: Bluetooth Socket Connection fails!::"+e.toString());
                 Log.e(TAG, "ConnectThread: Socket Info:"+mmSocket.toString());
                 e.printStackTrace();
-/*
-                try {
-                    mmSocket.close();
-                } catch (IOException e2) {
-                    Log.e(TAG,
-                            "Unable to close socket when connection failures",
-                            e2);
-                }
-                */
-                BluetoothService.this.initialize();
-                BluetoothService.this.enableBluetooth(SERVER_SIDE);
+                connectionFailed(CLIENT_SIDE);
                 return;
             }
 
@@ -468,8 +466,9 @@ public class BluetoothService {
         private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
+        private final int threadType;
 
-        public ConnectedThread(BluetoothSocket socket) {
+        public ConnectedThread(BluetoothSocket socket, int _threadType) {
             Log.e(TAG, "create ConnectedThread");
 
             mmSocket = socket;
@@ -486,17 +485,32 @@ public class BluetoothService {
 
             mmInStream = tmpIn;
             mmOutStream = tmpOut;
-            setState(STATE_CONNECTED);
+            threadType = _threadType;
+
+            if (threadType == SERVER_SIDE) {
+                setSState(STATE_CONNECTED);
+            }
+            else if (threadType == CLIENT_SIDE) {
+                setState(STATE_CONNECTED);
+            }
         }
 
         public void run() {
+            int state;
             Log.e(TAG, "Begin mConnectedThread...");
             byte[] buffer = new byte[1024];
             int bytes;
             String sensor_val; // Sensor string stream that comes from Arduino.
 
+            if (threadType == SERVER_SIDE) {
+                state = getSState();
+            }
+            else {
+                state = BluetoothService.this.getState();
+            }
+
             // Keep listening to the InputStream while connection
-            while (mState == STATE_CONNECTED) {
+            while (state == STATE_CONNECTED) {
                 Log.e(TAG, "mConnectedThread: waiting is started");
                 try {
                     if ((bytes = mmInStream.read(buffer)) != NULL) {
@@ -507,7 +521,6 @@ public class BluetoothService {
                         Log.e(TAG, "NO MESSAGE");
                     }
                 } catch (IOException e) {
-                    connectionFailed();
                     Log.e(TAG, "["+Long.toString(this.getId())+"]ConnectedThread: Bluetooth Socket Connection fails!"+e.toString());
                     Log.e("LHC", "connectedThread socket info: "+mmSocket.toString());
                     e.printStackTrace();
@@ -519,11 +532,10 @@ public class BluetoothService {
                                 "Unable to close socket when connection failures",
                                 e2);
                     }
-                    BluetoothService.this.initialize();
-                    BluetoothService.this.enableBluetooth(SERVER_SIDE);
+
+                    connectionFailed(threadType);
                     return;
                 }
-                SystemClock.sleep(100);
             }
         }
 
@@ -544,7 +556,8 @@ public class BluetoothService {
             try {
                 mmSocket.close();
                 Log.e("LHC", "["+Long.toString(this.getId())+"]ConnectedThread: cancel()");
-                updateUserInterface(Integer.toString(STATE_NONE), MESSAGE_STATE_CHANGE);
+                if (threadType == CLIENT_SIDE)  setState(STATE_NONE);
+                else updateUserInterface("Not activated", MESSAGE_SERVER_STATE);
             } catch (IOException e) {
                 Log.e(TAG, "close() of connect socket failed", e);
             }
@@ -567,7 +580,7 @@ public class BluetoothService {
             }
 
             mmServerSocket = tmp;
-            mState = STATE_LISTEN;
+            setSState(STATE_LISTEN);
         }
 
         public void run() {
@@ -577,7 +590,7 @@ public class BluetoothService {
 
             Log.e("LHC", "BtServerThread: Begin mAcceptThread" + this + ", state:"+BluetoothService.this.getState());
 
-            while (mState != STATE_CONNECTED) {
+            while (mSState != STATE_CONNECTED) {
                 Log.e("LHC", "BtServerThread: Start to listen");
                 try {
                     Log.e("LHC", "BtServerThread: Wait for a socket connection");
@@ -593,18 +606,16 @@ public class BluetoothService {
                 if (socket != null) {
                     Log.e("LHC", "BtServerThread: Socket connection succeeds");
                     synchronized (BluetoothService.this) {
-                        switch (mState) {
+                        switch (mSState) {
                             case STATE_LISTEN:
-                            case STATE_CONNECTING:
                                 connected(socket, socket.getRemoteDevice(), SERVER_SIDE);
-                                updateUserInterface("Activated", MESSAGE_SERVER_STATE);
+                                updateUserInterface("Connected!", MESSAGE_SERVER_STATE);
                                 break;
                             case STATE_NONE:
-                                updateUserInterface("Activated", MESSAGE_SERVER_STATE);
                             case STATE_CONNECTED:
                                 try {
                                     socket.close();
-                                    updateUserInterface("Wait for connection...", MESSAGE_SERVER_STATE);
+                                    //updateUserInterface("Wait for connection...", MESSAGE_SERVER_STATE);
                                     Log.e("LHC", "BtServerThread: socket closed");
                                 } catch (IOException e) {
                                     Log.e("LHC",

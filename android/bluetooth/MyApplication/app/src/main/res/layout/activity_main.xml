@@ -25,8 +25,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_toLeftOf="@+id/btn_connect"
-        android:layout_toStartOf="@+id/btn_connect"
+        android:layout_toLeftOf="@+id/btn_register"
+        android:layout_toStartOf="@+id/btn_register"
         android:text="send_msg" />
 
     <TextView
@@ -76,4 +76,13 @@
         android:layout_below="@+id/server_stats_title"
         android:text="Not activated"
         android:textColor="@android:color/holo_red_dark" />
+
+    <Button
+        android:id="@+id/btn_register"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_toLeftOf="@+id/btn_connect"
+        android:layout_toStartOf="@+id/btn_connect"
+        android:text="REGISTER" />
 </RelativeLayout>

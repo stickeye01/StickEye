@@ -37,8 +37,9 @@ public class MainActivity extends Activity implements OnClickListener {
     int MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN = 1;
 
     // Layout
-    private Button btn_Connect;
-    private Button btn_Send;
+    private Button btn_connect;
+    private Button btn_send;
+    private Button btn_register;
     private TextView txt_Result;
     private TextView txt_mac_id;
     private TextView txt_conn_stats;
@@ -98,21 +99,22 @@ public class MainActivity extends Activity implements OnClickListener {
                 MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN);
 
         // Main Layout
-        btn_Connect = (Button) findViewById(R.id.btn_connect);
-        btn_Send = (Button) findViewById(R.id.btn_send);
+        btn_connect = (Button) findViewById(R.id.btn_connect);
+        btn_send = (Button) findViewById(R.id.btn_send);
+        btn_register = (Button) findViewById(R.id.btn_register);
         txt_Result = (TextView) findViewById(R.id.txt_result);
         txt_conn_stats = (TextView) findViewById(R.id.conn_stats);
         txt_mac_id = (TextView) findViewById(R.id.mac_id);
         txt_serv_stats = (TextView) findViewById(R.id.server_stats);
-        btn_Connect.setOnClickListener(this);
-        btn_Send.setOnClickListener(this);
+        btn_connect.setOnClickListener(this);
+        btn_send.setOnClickListener(this);
+        btn_register.setOnClickListener(this);
 
         if(btService == null) {
             btService = new BluetoothService(this, mHandler);
         }
 
         mDBOpenHandler = new DBHandler(this);
-        mDBOpenHandler.open();
 
         //
         //PackageManager pkgMan = getPackageManager();
@@ -135,7 +137,8 @@ public class MainActivity extends Activity implements OnClickListener {
             // Two options: client and server side.
             case R.id.btn_connect:
                 if(btService.getDeviceState()) {
-                    if (btService.getState() != BluetoothService.STATE_CONNECTED) {
+                    if (btService.getState() != BluetoothService.STATE_CONNECTED &&
+                            btService.getSState() != BluetoothService.STATE_CONNECTED) {
                         btService.enableBluetooth(CLIENT_SIDE);
                     }
                 } else {
@@ -149,6 +152,13 @@ public class MainActivity extends Activity implements OnClickListener {
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
+                break;
+            case R.id.btn_register:
+                mDBOpenHandler.open();
+                mDBOpenHandler.insert("target","08:D4:2B:2C:31:F5");
+                String device_address = mDBOpenHandler.select();
+                txt_mac_id.setText(device_address);
+                mDBOpenHandler.close();
                 break;
         }
     }
@@ -164,9 +174,12 @@ public class MainActivity extends Activity implements OnClickListener {
                 }
                 break;
             case REQUEST_ENABLE_BT:
-                // When the request to enable Bluetooth returns
+                // When the request to enable Bluetooth returns.
                 if (resultCode != Activity.RESULT_OK) {
                     Log.d(TAG, "Bluetooth is not enabled");
+                } else {
+                    // repetitively activate server.
+                    btService.enableBluetooth(SERVER_SIDE);
                 }
                 break;
         }

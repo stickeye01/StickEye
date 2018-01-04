@@ -95,11 +95,16 @@ public class DBHandler {
         public String select(SQLiteDatabase sqLiteDatabase) {
             String result = "";
 
-            Cursor cursor = mDB.rawQuery("SELECT * FROM "+CreateDB._TABLENAME, null);
-            while (cursor.moveToNext()) {
-                result += cursor.getString(0) + ", " + cursor.getString(1)+"\n";
+            Cursor cursor = mDB.rawQuery("SELECT address FROM "+CreateDB._TABLENAME+" where device='target'", null);
+            Log.e("LHC", "DBHandler: "+Integer.toString(cursor.getCount())+", Position:"+Integer.toString(cursor.getPosition()));
+            if (cursor.getCount() > 0) {
+                cursor.moveToFirst();
+                result += cursor.getString(0) + "\n";
+            } else {
+                result = "No device exists";
             }
 
+            Log.e("LHC", "DBHandler: "+cursor.toString()+":"+result);
             return result;
         }
     }
