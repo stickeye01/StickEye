@@ -51,6 +51,9 @@ public class MainActivity extends Activity implements OnClickListener {
     // Database
     private DBHandler mDBOpenHandler;
 
+    // Register dialog
+    private RegisterDialog mRegDialog;
+
     int test_int = 0;
 
     /*
@@ -115,7 +118,7 @@ public class MainActivity extends Activity implements OnClickListener {
         }
 
         mDBOpenHandler = new DBHandler(this);
-
+        mRegDialog = new RegisterDialog(this);
         //
         //PackageManager pkgMan = getPackageManager();
         //if (pkgMan.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -154,6 +157,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 }
                 break;
             case R.id.btn_register:
+                mRegDialog.show();
                 mDBOpenHandler.open();
                 mDBOpenHandler.insert("target","08:D4:2B:2C:31:F5");
                 String device_address = mDBOpenHandler.select();
