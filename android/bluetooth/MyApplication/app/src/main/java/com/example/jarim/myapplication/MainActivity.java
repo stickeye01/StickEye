@@ -1,13 +1,11 @@
 package com.example.jarim.myapplication;
 
 import android.Manifest;
-import android.content.pm.PackageManager;
+import android.annotation.SuppressLint;
 import android.support.v4.app.ActivityCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.app.Activity;
 import android.content.Intent;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -16,7 +14,8 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 
-import org.w3c.dom.Text;
+import com.example.jarim.myapplication.USBConnector.Constants;
+import com.example.jarim.myapplication.USBConnector.SerialConnector;
 
 import java.io.UnsupportedEncodingException;
 
@@ -44,6 +43,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private TextView txt_mac_id;
     private TextView txt_conn_stats;
     private TextView txt_serv_stats;
+    private TextView txt_usb_stats;
 
     // Bluetooth
     private BluetoothService btService = null;
@@ -53,6 +53,9 @@ public class MainActivity extends Activity implements OnClickListener {
 
     // Register dialog
     private RegisterDialog mRegDialog;
+    private SerialConnector mSerialConn;
+    private SerialListener usbListener;
+    private usbHandler usbHandler;
 
     int test_int = 0;
 
@@ -61,7 +64,8 @@ public class MainActivity extends Activity implements OnClickListener {
      *
      * Description: The handler that gets information back from the BluetoothService.
      */
-    private final Handler mHandler = new Handler() {
+    @SuppressLint("HandlerLeak")
+    private final Handler btHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             switch(msg.what) {
@@ -109,12 +113,13 @@ public class MainActivity extends Activity implements OnClickListener {
         txt_conn_stats = (TextView) findViewById(R.id.conn_stats);
         txt_mac_id = (TextView) findViewById(R.id.mac_id);
         txt_serv_stats = (TextView) findViewById(R.id.server_stats);
+        txt_usb_stats = (TextView) findViewById(R.id.usb_stat);
         btn_connect.setOnClickListener(this);
         btn_send.setOnClickListener(this);
         btn_register.setOnClickListener(this);
 
         if(btService == null) {
-            btService = new BluetoothService(this, mHandler);
+            btService = new BluetoothService(this, btHandler);
         }
 
         mDBOpenHandler = new DBHandler(this);
@@ -132,6 +137,10 @@ public class MainActivity extends Activity implements OnClickListener {
         } else {
             finish();
         }
+
+        usbHandler = new usbHandler();
+        usbListener = new SerialListener();
+        mSerialConn = new SerialConnector(getApplicationContext(), usbListener, usbHandler);
     }
 
     @Override
@@ -163,6 +172,8 @@ public class MainActivity extends Activity implements OnClickListener {
                 String device_address = mDBOpenHandler.select();
                 txt_mac_id.setText(device_address);
                 mDBOpenHandler.close();
+                txt_usb_stats.setText("");
+                mSerialConn.initialize();
                 break;
         }
     }
@@ -189,5 +200,68 @@ public class MainActivity extends Activity implements OnClickListener {
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mSerialConn.finalize();
+    }
+
+
+    public class usbHandler extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            switch(msg.what) {
+                case Constants.MSG_DEVICD_INFO:
+                    txt_usb_stats.append((String)msg.obj);
+                    break;
+                case Constants.MSG_DEVICE_COUNT:
+                    txt_usb_stats.append(Integer.toString(msg.arg1) + " device(s) found \n");
+                    break;
+                case Constants.MSG_READ_DATA_COUNT:
+                    txt_usb_stats.append(((String)msg.obj) + "\n");
+                    break;
+                case Constants.MSG_READ_DATA:
+                    if(msg.obj != null) {
+                        //mTextInfo.setText((String)msg.obj);
+                        txt_usb_stats.append((String)msg.obj);
+                        txt_usb_stats.append("\n");
+                    }
+                    break;
+                case Constants.MSG_SERIAL_ERROR:
+                    txt_usb_stats.append((String)msg.obj);
+                    break;
+            }
+        }
+    }
+
+
+    public class SerialListener {
+        public void onReceive(int msg, int arg0, int arg1, String arg2, Object arg3) {
+            switch(msg) {
+                case Constants.MSG_DEVICD_INFO:
+                    txt_usb_stats.append(arg2);
+                    break;
+                case Constants.MSG_DEVICE_COUNT:
+                    txt_usb_stats.append(Integer.toString(arg0) + " device(s) found \n");
+                    break;
+                case Constants.MSG_READ_DATA_COUNT:
+                    txt_usb_stats.append(Integer.toString(arg0) + " buffer received \n");
+                    break;
+                case Constants.MSG_READ_DATA:
+                    if(arg3 != null) {
+                        txt_usb_stats.setText((String)arg3);
+                        txt_usb_stats.append((String)arg3);
+                        txt_usb_stats.append("\n");
+                    }
+                    break;
+                case Constants.MSG_SERIAL_ERROR:
+                    txt_usb_stats.append(arg2);
+                    break;
+                case Constants.MSG_FATAL_ERROR_FINISH_APP:
+                    //finish();
+                    break;
+            }
+        }
+    }
 }
 

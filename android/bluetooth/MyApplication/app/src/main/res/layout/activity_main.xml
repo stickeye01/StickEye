@@ -85,4 +85,23 @@
         android:layout_toLeftOf="@+id/btn_connect"
         android:layout_toStartOf="@+id/btn_connect"
         android:text="REGISTER" />
+
+    <TextView
+        android:id="@+id/usb_stat_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/server_stats"
+        android:text="Usb status" />
+
+    <TextView
+        android:id="@+id/usb_stat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/server_stats"
+        android:layout_alignStart="@+id/server_stats"
+        android:layout_below="@+id/usb_stat_title"
+        android:text="Not activated"
+        android:textColor="@android:color/holo_red_dark" />
 </RelativeLayout>
