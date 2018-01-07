@@ -14,6 +14,7 @@ import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemClock;
 import android.util.Log;
 import com.example.jarim.myapplication.MainActivity.SerialListener;
 
@@ -24,6 +25,7 @@ public class SerialConnector {
     private SerialListener mListener;
     private Handler mHandler;
 
+    private SerialConnectingThread mConnectingThread;
     private SerialMonitorThread mSerialThread;
 
     private USBSerialDriver mDriver;
@@ -48,57 +50,8 @@ public class SerialConnector {
 
 
     public void initialize() {
-        UsbManager manager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
-
-        List<USBSerialDriver> availableDrivers = USBSerialProber.getDefaultProber().findAllDrivers(manager);
-        if (availableDrivers.isEmpty()) {
-            mListener.onReceive(Constants.MSG_SERIAL_ERROR, 0, 0, "Error: There is no available device. \n", null);
-            return;
-        }
-
-        mDriver = availableDrivers.get(0);
-        if(mDriver == null) {
-            mListener.onReceive(Constants.MSG_SERIAL_ERROR, 0, 0, "Error: Driver is Null \n", null);
-            return;
-        }
-
-        // Report to UI
-        StringBuilder sb = new StringBuilder();
-        UsbDevice device = mDriver.getDevice();
-        sb.append(" DName : ").append(device.getDeviceName()).append("\n")
-                .append(" DID : ").append(device.getDeviceId()).append("\n")
-                .append(" VID : ").append(device.getVendorId()).append("\n")
-                .append(" PID : ").append(device.getProductId()).append("\n")
-                .append(" IF Count : ").append(device.getInterfaceCount()).append("\n");
-        mListener.onReceive(Constants.MSG_DEVICD_INFO, 0, 0, sb.toString(), null);
-
-        UsbDeviceConnection connection = manager.openDevice(device);
-        if (connection == null) {
-            mListener.onReceive(Constants.MSG_SERIAL_ERROR, 0, 0, "Error: Cannot connect to device. \n", null);
-            return;
-        }
-
-        // Read some data! Most have just one port (port 0).
-        mPort = mDriver.getPorts().get(0);
-        if(mPort == null) {
-            mListener.onReceive(Constants.MSG_SERIAL_ERROR, 0, 0, "Error: Cannot get port. \n", null);
-            return;
-        }
-
-        try {
-            mPort.open(connection);
-            mPort.setParameters(9600, 8, 1, 0);		// baudrate:9600, dataBits:8, stopBits:1, parity:N
-//			byte buffer[] = new byte[16];
-//			int numBytesRead = mPort.read(buffer, 1000);
-//			Log.d(TAG, "Read " + numBytesRead + " bytes.");
-        } catch (IOException e) {
-            // Deal with error.
-            mListener.onReceive(Constants.MSG_SERIAL_ERROR, 0, 0, "Error: Cannot open port \n" + e.toString() + "\n", null);
-        } finally {
-        }
-
         // Everything is fine. Start serial monitoring thread.
-        startThread();
+        startConnectingThread();
     }	// End of initialize()
 
     public void finalize() {
@@ -135,8 +88,18 @@ public class SerialConnector {
     /*****************************************************
      *	private methods
      ******************************************************/
+    // attempt to connect
+    private void startConnectingThread() {
+        if (mConnectingThread != null) {
+            mConnectingThread = null;
+        }
+
+        mConnectingThread = new SerialConnectingThread();
+        mConnectingThread.start();
+    }
+
     // start thread
-    private void startThread() {
+    private void startConnectedThread() {
         Log.d(tag, "Start serial monitoring thread");
         mListener.onReceive(Constants.MSG_SERIAL_ERROR, 0, 0, "Start serial monitoring thread \n", null);
         if(mSerialThread == null) {
@@ -152,8 +115,107 @@ public class SerialConnector {
             mSerialThread.setKillSign(true);
             mSerialThread = null;
         }
+        if(mConnectingThread != null && mConnectingThread.isAlive())
+            mConnectingThread.interrupt();
+        if(mConnectingThread != null) {
+            mConnectingThread = null;
+        }
     }
 
+
+    public class SerialConnectingThread extends Thread {
+        private void finalizeThread() {
+            // Print message length
+            Message msg = mHandler.obtainMessage(Constants.MSG_DIALOG_HIDE);
+            mHandler.sendMessage(msg);
+            stopThread();
+        }
+
+        /**
+         *	Main loop
+         **/
+        @Override
+        public void run()
+        {
+            int startTime = 0;
+            boolean is_success = false;
+            while (!Thread.interrupted()) {
+                if (startTime >= 30000) break;
+                if (initialize()) {
+                    is_success = true;
+                    break;
+                }
+                startTime += 10;
+                SystemClock.sleep(10);
+            }
+            // Finalize
+            finalizeThread();
+            if (is_success) startConnectedThread();
+        }	// End of run()
+
+        private boolean initialize()
+        {
+            UsbManager manager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
+            Message msg;
+
+            List<USBSerialDriver> availableDrivers = USBSerialProber.getDefaultProber().findAllDrivers(manager);
+            if (availableDrivers.isEmpty()) {
+                msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # A drive is NULL \n");
+                mHandler.sendMessage(msg);
+                return false;
+            }
+
+            mDriver = availableDrivers.get(0);
+            if(mDriver == null) {
+                msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # A drive is NULL \n");
+                mHandler.sendMessage(msg);
+                return false;
+            }
+
+            // Report to UI
+            StringBuilder sb = new StringBuilder();
+            UsbDevice device = mDriver.getDevice();
+            sb.append(" DName : ").append(device.getDeviceName()).append("\n")
+                    .append(" DID : ").append(device.getDeviceId()).append("\n")
+                    .append(" VID : ").append(device.getVendorId()).append("\n")
+                    .append(" PID : ").append(device.getProductId()).append("\n")
+                    .append(" IF Count : ").append(device.getInterfaceCount()).append("\n");
+            msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, sb.toString());
+            mHandler.sendMessage(msg);
+
+            UsbDeviceConnection connection = manager.openDevice(device);
+            if (connection == null) {
+                msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # mPort is NULL \n");
+                mHandler.sendMessage(msg);
+                return false;
+            }
+
+            // Read some data! Most have just one port (port 0).
+            mPort = mDriver.getPorts().get(0);
+            if(mPort == null) {
+                msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # mPort is NULL \n");
+                mHandler.sendMessage(msg);
+                return false;
+            }
+
+            try {
+                mPort.open(connection);
+                mPort.setParameters(9600, 8, 1, 0);		// baudrate:9600, dataBits:8, stopBits:1, parity:N
+//			byte buffer[] = new byte[16];
+//			int numBytesRead = mPort.read(buffer, 1000);
+//			Log.d(TAG, "Read " + numBytesRead + " bytes.");
+            } catch (IOException e) {
+                // Deal with error.
+                msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # run: " + e.toString() + "\n");
+                mHandler.sendMessage(msg);
+                return false;
+            } finally {
+            }
+
+            return true;
+        }
+
+    }	// End of SerialMonitorThread
 
 
 
@@ -168,11 +230,8 @@ public class SerialConnector {
         private SerialCommand mCmd = new SerialCommand();
 
 
-        private void initializeThread() {
-            // This code will be executed only once.
-        }
-
         private void finalizeThread() {
+            stopThread();
         }
 
         // stop this thread

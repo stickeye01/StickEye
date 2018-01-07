@@ -2,6 +2,7 @@ package com.example.jarim.myapplication;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.os.Bundle;
 import android.app.Activity;
@@ -13,6 +14,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.jarim.myapplication.USBConnector.Constants;
 import com.example.jarim.myapplication.USBConnector.SerialConnector;
@@ -167,13 +169,18 @@ public class MainActivity extends Activity implements OnClickListener {
                 break;
             case R.id.btn_register:
                 mRegDialog.show();
+                // wait until usb is connected
+                txt_usb_stats.setText("");
+                mSerialConn.initialize();
+                //while(!mSerialConn.initialize()) ;
+                mSerialConn.initialize();
+                Toast.makeText(this, "USB connection succeed!", Toast.LENGTH_LONG).show();
+
                 mDBOpenHandler.open();
                 mDBOpenHandler.insert("target","08:D4:2B:2C:31:F5");
                 String device_address = mDBOpenHandler.select();
                 txt_mac_id.setText(device_address);
                 mDBOpenHandler.close();
-                txt_usb_stats.setText("");
-                mSerialConn.initialize();
                 break;
         }
     }
@@ -212,23 +219,26 @@ public class MainActivity extends Activity implements OnClickListener {
         public void handleMessage(Message msg) {
             switch(msg.what) {
                 case Constants.MSG_DEVICD_INFO:
-                    txt_usb_stats.append((String)msg.obj);
+                    txt_usb_stats.setText((String)msg.obj);
                     break;
                 case Constants.MSG_DEVICE_COUNT:
-                    txt_usb_stats.append(Integer.toString(msg.arg1) + " device(s) found \n");
+                    txt_usb_stats.setText(Integer.toString(msg.arg1) + " device(s) found \n");
                     break;
                 case Constants.MSG_READ_DATA_COUNT:
-                    txt_usb_stats.append(((String)msg.obj) + "\n");
+                    txt_usb_stats.setText(((String)msg.obj) + "\n");
                     break;
                 case Constants.MSG_READ_DATA:
                     if(msg.obj != null) {
                         //mTextInfo.setText((String)msg.obj);
-                        txt_usb_stats.append((String)msg.obj);
+                        txt_usb_stats.setText((String)msg.obj);
                         txt_usb_stats.append("\n");
                     }
                     break;
                 case Constants.MSG_SERIAL_ERROR:
-                    txt_usb_stats.append((String)msg.obj);
+                    txt_usb_stats.setText((String)msg.obj);
+                    break;
+                case Constants.MSG_DIALOG_HIDE:
+                    mRegDialog.hide();
                     break;
             }
         }
@@ -249,7 +259,6 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case Constants.MSG_READ_DATA:
                     if(arg3 != null) {
-                        txt_usb_stats.setText((String)arg3);
                         txt_usb_stats.append((String)arg3);
                         txt_usb_stats.append("\n");
                     }
