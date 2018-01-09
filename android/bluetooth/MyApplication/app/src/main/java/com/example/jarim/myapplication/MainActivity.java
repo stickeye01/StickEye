@@ -48,6 +48,10 @@ public class MainActivity extends Activity implements OnClickListener {
     // Bluetooth
     private BluetoothService btService = null;
 
+    //tts
+    TtsService tts = null;
+
+
     // Database
     private DBHandler mDBOpenHandler;
 
@@ -84,6 +88,10 @@ public class MainActivity extends Activity implements OnClickListener {
         Log.e(TAG, "onCreate");
         setContentView(R.layout.activity_main);
 
+        //TTS Service
+        tts = new TtsService();
+        tts.init(this);
+
         // Permission
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
@@ -97,6 +105,8 @@ public class MainActivity extends Activity implements OnClickListener {
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.BLUETOOTH_ADMIN},
                 MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN);
+
+
 
         // Main Layout
         btn_connect = (Button) findViewById(R.id.btn_connect);
@@ -112,6 +122,10 @@ public class MainActivity extends Activity implements OnClickListener {
 
         if(btService == null) {
             btService = new BluetoothService(this, mHandler);
+
+            //TTS TEST
+            //String text = "서비스가 시작되었습니다";
+            //tts.initQueue(text);
         }
 
         mDBOpenHandler = new DBHandler(this);
@@ -185,5 +199,11 @@ public class MainActivity extends Activity implements OnClickListener {
         }
     }
 
+    //Finish TTS Service
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        tts.shutDown();
+    }
 }
 
