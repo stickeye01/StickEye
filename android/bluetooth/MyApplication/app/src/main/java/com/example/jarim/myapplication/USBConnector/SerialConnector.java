@@ -62,7 +62,8 @@ public class SerialConnector {
             mPort.close();
             mPort = null;
         } catch(Exception ex) {
-            mListener.onReceive(Constants.MSG_SERIAL_ERROR, 0, 0, "Error: Cannot finalize serial connector \n" + ex.toString() + "\n", null);
+            Message msg1 = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error: Cannot finalize serial connector \n" + ex.toString() + "\n");
+            mHandler.sendMessage(msg1);
         }
     }
 
@@ -79,7 +80,8 @@ public class SerialConnector {
                 mPort.write(cmd.getBytes(), cmd.length());		// Send to remote device
             }
             catch(IOException e) {
-                mListener.onReceive(Constants.MSG_SERIAL_ERROR, 0, 0, "Failed in sending command. : IO Exception \n", null);
+                Message msg1 = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Failed in sending command. : IO Exception \n");
+                mHandler.sendMessage(msg1);
             }
         }
     }
@@ -90,6 +92,7 @@ public class SerialConnector {
      ******************************************************/
     // attempt to connect
     private void startConnectingThread() {
+        Log.d(tag, "Start a thread that attempts to connect serial networking");
         if (mConnectingThread != null) {
             mConnectingThread = null;
         }
@@ -101,12 +104,14 @@ public class SerialConnector {
     // start thread
     private void startConnectedThread() {
         Log.d(tag, "Start serial monitoring thread");
-        mListener.onReceive(Constants.MSG_SERIAL_ERROR, 0, 0, "Start serial monitoring thread \n", null);
+        Message msg1 = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Start serial monitoring thread \n");
+        mHandler.sendMessage(msg1);
         if(mSerialThread == null) {
             mSerialThread = new SerialMonitorThread();
             mSerialThread.start();
         }
     }
+
     // stop thread
     private void stopThread() {
         if(mSerialThread != null && mSerialThread.isAlive())
@@ -125,7 +130,7 @@ public class SerialConnector {
 
     public class SerialConnectingThread extends Thread {
         private void finalizeThread() {
-            // Print message length
+            // hide dialog.
             Message msg = mHandler.obtainMessage(Constants.MSG_DIALOG_HIDE);
             mHandler.sendMessage(msg);
             stopThread();
@@ -180,7 +185,7 @@ public class SerialConnector {
                     .append(" VID : ").append(device.getVendorId()).append("\n")
                     .append(" PID : ").append(device.getProductId()).append("\n")
                     .append(" IF Count : ").append(device.getInterfaceCount()).append("\n");
-            msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, sb.toString());
+            msg = mHandler.obtainMessage(Constants.MSG_DEVICD_INFO, sb.toString());
             mHandler.sendMessage(msg);
 
             UsbDeviceConnection connection = manager.openDevice(device);
@@ -211,6 +216,9 @@ public class SerialConnector {
                 return false;
             } finally {
             }
+
+            msg = mHandler.obtainMessage(Constants.MSG_CONN_SUCCESS);
+            mHandler.sendMessage(msg);
 
             return true;
         }

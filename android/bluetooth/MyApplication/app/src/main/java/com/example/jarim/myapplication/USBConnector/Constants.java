@@ -9,7 +9,9 @@ public class Constants {
     public static final int MSG_DEVICD_INFO = 11;
     public static final int MSG_READ_DATA_COUNT = 21;
     public static final int MSG_READ_DATA = 22;
+    public static final int MSG_DIALOG_HIDE = 23;
+    public static final int MSG_CONN_SUCCESS = 24;
     public static final int MSG_SERIAL_ERROR = -1;
     public static final int MSG_FATAL_ERROR_FINISH_APP = -2;
-    public static final int MSG_DIALOG_HIDE = 23;
+    public static final int MSG_CONN_FAIL = -3;
 }

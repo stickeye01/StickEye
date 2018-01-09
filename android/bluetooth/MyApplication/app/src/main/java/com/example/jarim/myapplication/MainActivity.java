@@ -2,6 +2,7 @@ package com.example.jarim.myapplication;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.os.Bundle;
@@ -59,6 +60,9 @@ public class MainActivity extends Activity implements OnClickListener {
     private SerialListener usbListener;
     private usbHandler usbHandler;
 
+    // Activity context
+    private Context aContext;
+
     int test_int = 0;
 
     /*
@@ -92,7 +96,6 @@ public class MainActivity extends Activity implements OnClickListener {
         super.onCreate(savedInstanceState);
         Log.e(TAG, "onCreate");
         setContentView(R.layout.activity_main);
-
         // Permission
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
@@ -125,7 +128,6 @@ public class MainActivity extends Activity implements OnClickListener {
         }
 
         mDBOpenHandler = new DBHandler(this);
-        mRegDialog = new RegisterDialog(this);
         //
         //PackageManager pkgMan = getPackageManager();
         //if (pkgMan.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -143,6 +145,17 @@ public class MainActivity extends Activity implements OnClickListener {
         usbHandler = new usbHandler();
         usbListener = new SerialListener();
         mSerialConn = new SerialConnector(getApplicationContext(), usbListener, usbHandler);
+        mRegDialog = new RegisterDialog(this);
+        aContext = this;
+
+        // initialize all the things for checking.
+        mSerialConn.initialize();
+        if(btService.getDeviceState()) {
+            if (btService.getState() != BluetoothService.STATE_CONNECTED &&
+                    btService.getSState() != BluetoothService.STATE_CONNECTED) {
+                btService.enableBluetooth(CLIENT_SIDE);
+            }
+        }
     }
 
     @Override
@@ -155,8 +168,6 @@ public class MainActivity extends Activity implements OnClickListener {
                             btService.getSState() != BluetoothService.STATE_CONNECTED) {
                         btService.enableBluetooth(CLIENT_SIDE);
                     }
-                } else {
-                    finish();
                 }
                 break;
             // Send messages to other devices
@@ -169,13 +180,8 @@ public class MainActivity extends Activity implements OnClickListener {
                 break;
             case R.id.btn_register:
                 mRegDialog.show();
-                // wait until usb is connected
                 txt_usb_stats.setText("");
                 mSerialConn.initialize();
-                //while(!mSerialConn.initialize()) ;
-                mSerialConn.initialize();
-                Toast.makeText(this, "USB connection succeed!", Toast.LENGTH_LONG).show();
-
                 mDBOpenHandler.open();
                 mDBOpenHandler.insert("target","08:D4:2B:2C:31:F5");
                 String device_address = mDBOpenHandler.select();
@@ -211,6 +217,7 @@ public class MainActivity extends Activity implements OnClickListener {
     protected void onDestroy() {
         super.onDestroy();
         mSerialConn.finalize();
+        mRegDialog.dismiss();
     }
 
 
@@ -239,6 +246,12 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case Constants.MSG_DIALOG_HIDE:
                     mRegDialog.hide();
+                    break;
+                case Constants.MSG_CONN_SUCCESS:
+                    //Toast.makeText(aContext, "USB connection succeeds!!", Toast.LENGTH_LONG).show();
+                    break;
+                case Constants.MSG_CONN_FAIL:
+                    //Toast.makeText(aContext, "USB connection fails!!", Toast.LENGTH_LONG).show();
                     break;
             }
         }
