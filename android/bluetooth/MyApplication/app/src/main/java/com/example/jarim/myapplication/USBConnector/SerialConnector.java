@@ -287,7 +287,7 @@ public class SerialConnector {
                         } // End of if(numBytesRead > 0)
                     }
                     catch (IOException e) {
-                        Log.d(tag, "IOException - mDriver.read");
+                        Log.e(tag, "IOException - mDriver.read: "+e.toString());
                         Message msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # run: " + e.toString() + "\n");
                         mHandler.sendMessage(msg);
                         mKillSign = true;

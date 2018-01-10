@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.UUID;
@@ -166,7 +167,7 @@ public class BluetoothService {
 
         setMACID("08:D4:2B:2C:31:F5");
         setMACID("00:21:13:01:51:5D");
-        setMACID("20:16:05:19:90:62");
+        //setMACID("20:16:05:19:90:62");
         getDeviceInfo(address);
     }
 
@@ -468,9 +469,10 @@ public class BluetoothService {
     // THREAD THAT WILL BE USED AFTER CONNECTING .. @{
     private class ConnectedThread extends Thread {
         private final BluetoothSocket mmSocket;
-        private final InputStream mmInStream;
-        private final OutputStream mmOutStream;
-        private final InputStreamReader mmInRStream;
+        private InputStream mmInStream = null;
+        private OutputStream mmOutStream = null;
+        private InputStreamReader mmInRStream = null;
+        private OutputStreamWriter mmOutRStream = null;
         private final int threadType;
 
         public ConnectedThread(BluetoothSocket socket, int _threadType) {
@@ -487,10 +489,10 @@ public class BluetoothService {
                 mmInStream = tmpIn;
                 mmOutStream = tmpOut;
                 mmInRStream = new InputStreamReader(mmInStream, "ASCII");
+                mmOutRStream = new OutputStreamWriter(mmOutStream, "ASCII");
             } catch (IOException e) {
                 Log.e(TAG, "temp sockets not created", e);
             }
-
 
             threadType = _threadType;
 
@@ -505,10 +507,19 @@ public class BluetoothService {
         public void run() {
             int state;
             Log.e(TAG, "Begin mConnectedThread...");
-            byte[] buffer = new byte[1024];
-            int bytes;
-            int data_available = 0;
-            String sensor_val; // Sensor string stream that comes from Arduino.
+            //byte[] buffer = new byte[1024];
+            //int bytes;
+            //String sensorVal; // Sensor string stream that comes from Arduino.
+            /************************/
+            final char mEndDelimiter = '\n';
+            final char mStartDelimiter = '\r';
+            boolean isStart = false;
+            final int MAX = 64;
+            char[] buffer = new char[MAX];
+            int index = 0;
+            int dataAvailable = 0;
+            String recvMessage = null;
+            /************************/
 
             if (threadType == SERVER_SIDE) {
                 state = getSState();
@@ -519,13 +530,14 @@ public class BluetoothService {
 
             // Keep listening to the InputStream while connection
             while (state == STATE_CONNECTED) {
-                Log.e(TAG, "mConnectedThread: waiting is started");
                 try {
-                    if ((data_available = mmInStream.available()) > 0) {
+                    write("TEST\n\r");
+                    if ((dataAvailable = mmInStream.available()) > 0) {
                         //bytes = mmInStream.read(buffer);
                         //sensor_val = new String(buffer, "UTF-8");
                         //Log.e(TAG, "GET MSG: " + sensor_val);
                         int c = mmInRStream.read();
+                        Log.e("LHC", "getMsg:"+Character.toString((char) c));
                         switch ((char)c) {
                             case mStartDelimiter: //'\r' 전송 char을 buffer에 저장하기 시작
                                 buffer = new char[MAX];
@@ -533,18 +545,18 @@ public class BluetoothService {
                                 index = 0;
                                 break;
                             case mEndDelimiter: //'\n' buffer를 가지고 recvMessage 문자열 만듬
-                +                                char[] recvChar = new char[index];
-                +                                System.arraycopy(buffer, 0, recvChar, 0, recvChar.length);
-                +                                recvMessage = new String(recvChar);
-                +                                Log.v(TAG, "message : " + recvMessage);
-                +                                isStart = false;
-                +                                break;
-            +                            default: //mStartDelimiter가 전송 되면 buffer에 전송된 character 저장
-                +                                if (isStart) {
-                    +                                    buffer[index++] = (char) c;
-                    +                                }
-                +                                break;
-            +                        }
+                                char[] recvChar = new char[index];
+                                System.arraycopy(buffer, 0, recvChar, 0, recvChar.length);
+                                recvMessage = new String(recvChar);
+                                Log.e(TAG, "message : " + recvMessage);
+                                isStart = false;
+                                break;
+                            default: //mStartDelimiter가 전송 되면 buffer에 전송된 character 저장
+                                if (isStart) {
+                                    buffer[index++] = (char) c;
+                                }
+                                 break;
+                        }
                         //updateUserInterface(sensor_val, MESSAGE_READ);
                     }
                     Thread.sleep(500);
@@ -576,11 +588,22 @@ public class BluetoothService {
         public void write(byte[] buffer) {
             try {
                 mmOutStream.write(buffer);
-                Log.e("LHC", "Succeed to send msg:"+buffer.toString());
+                //Log.e("LHC", "Succeed to send msg:"+buffer.toString());
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+
+        public void write(String c) {
+            try {
+                mmOutRStream.write(c);
+                Log.e("LHC", "Succeed to send msg:"+c);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+
 
         public void cancel() {
             try {
