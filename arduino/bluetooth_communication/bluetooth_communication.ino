@@ -11,7 +11,7 @@ String maxid = "00:21:13:01:51:5D";
 int index;
 char data;
 char buffer[] = {'\r','m','s','g','\n'};
-String mode = "serial";
+String mode = "bluetooth";
 SoftwareSerial BTSerial(blue_Tx, blue_Rx);  //쓰기,읽기(RX,TX) 블루투스 모듈과 교차하여 연결됨
 /*안드로이드에서 전송 된 데이터는 블루투스 모듈로 수신되면 
  * 블루투스는 아두이노에 쓰기 작업 (Tx)
@@ -54,10 +54,10 @@ void bluetoothMode(){
         /*1bit 당 1초 delay를 줌.
          * 현재는 8bit를 print 하기 때문에
         */
-    }
-    // 초기화
-       index = 0;
-       bufferSize = 0;
+      }
+      // 초기화
+      index = 0;
+      bufferSize = 0;
     }
   }
 }
