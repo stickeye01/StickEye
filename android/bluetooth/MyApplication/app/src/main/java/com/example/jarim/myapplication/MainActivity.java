@@ -182,11 +182,6 @@ public class MainActivity extends Activity implements OnClickListener {
                 mRegDialog.show();
                 txt_usb_stats.setText("");
                 mSerialConn.initialize();
-                mDBOpenHandler.open();
-                mDBOpenHandler.insert("target","08:D4:2B:2C:31:F5");
-                String device_address = mDBOpenHandler.select();
-                txt_mac_id.setText(device_address);
-                mDBOpenHandler.close();
                 break;
         }
     }
@@ -247,8 +242,14 @@ public class MainActivity extends Activity implements OnClickListener {
                 case Constants.MSG_DIALOG_HIDE:
                     mRegDialog.hide();
                     break;
-                case Constants.MSG_CONN_SUCCESS:
+                case Constants.MSG_USB_CONN_SUCCESS:
                     //Toast.makeText(aContext, "USB connection succeeds!!", Toast.LENGTH_LONG).show();
+                    mSerialConn.sendCommand("MAC_ADDR");
+                    mDBOpenHandler.open();
+                    mDBOpenHandler.delete("*", "*");
+                    String device_address = mDBOpenHandler.select();
+                    txt_mac_id.setText(device_address);
+                    mDBOpenHandler.close();
                     break;
                 case Constants.MSG_CONN_FAIL:
                     //Toast.makeText(aContext, "USB connection fails!!", Toast.LENGTH_LONG).show();

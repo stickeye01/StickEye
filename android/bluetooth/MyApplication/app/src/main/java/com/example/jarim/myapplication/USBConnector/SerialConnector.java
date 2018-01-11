@@ -217,7 +217,7 @@ public class SerialConnector {
             } finally {
             }
 
-            msg = mHandler.obtainMessage(Constants.MSG_CONN_SUCCESS);
+            msg = mHandler.obtainMessage(Constants.MSG_USB_CONN_SUCCESS);
             mHandler.sendMessage(msg);
 
             return true;

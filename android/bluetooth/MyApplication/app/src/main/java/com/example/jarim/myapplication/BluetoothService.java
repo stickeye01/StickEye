@@ -166,8 +166,8 @@ public class BluetoothService {
 */
 
         setMACID("08:D4:2B:2C:31:F5");
-        setMACID("00:21:13:01:51:5D");
-        //setMACID("20:16:05:19:90:62");
+        //setMACID("00:21:13:01:51:5D");
+        setMACID("20:16:05:19:90:62");
         getDeviceInfo(address);
     }
 
@@ -507,7 +507,6 @@ public class BluetoothService {
         public void run() {
             int state;
             Log.e(TAG, "Begin mConnectedThread...");
-            //byte[] buffer = new byte[1024];
             //int bytes;
             //String sensorVal; // Sensor string stream that comes from Arduino.
             /************************/
@@ -515,7 +514,8 @@ public class BluetoothService {
             final char mStartDelimiter = '\r';
             boolean isStart = false;
             final int MAX = 64;
-            char[] buffer = new char[MAX];
+            char[] writeBuffer = new char[MAX];
+            byte[] readBuffer = new byte[MAX];
             int index = 0;
             int dataAvailable = 0;
             String recvMessage = null;
@@ -531,33 +531,32 @@ public class BluetoothService {
             // Keep listening to the InputStream while connection
             while (state == STATE_CONNECTED) {
                 try {
-                    write("TEST\n\r");
                     if ((dataAvailable = mmInStream.available()) > 0) {
                         //bytes = mmInStream.read(buffer);
                         //sensor_val = new String(buffer, "UTF-8");
                         //Log.e(TAG, "GET MSG: " + sensor_val);
                         int c = mmInRStream.read();
-                        Log.e("LHC", "getMsg:"+Character.toString((char) c));
                         switch ((char)c) {
                             case mStartDelimiter: //'\r' 전송 char을 buffer에 저장하기 시작
-                                buffer = new char[MAX];
+                                writeBuffer = new char[MAX];
                                 isStart = true;
                                 index = 0;
                                 break;
                             case mEndDelimiter: //'\n' buffer를 가지고 recvMessage 문자열 만듬
                                 char[] recvChar = new char[index];
-                                System.arraycopy(buffer, 0, recvChar, 0, recvChar.length);
+                                System.arraycopy(writeBuffer, 0, recvChar, 0, recvChar.length);
                                 recvMessage = new String(recvChar);
                                 Log.e(TAG, "message : " + recvMessage);
                                 isStart = false;
                                 break;
                             default: //mStartDelimiter가 전송 되면 buffer에 전송된 character 저장
                                 if (isStart) {
-                                    buffer[index++] = (char) c;
+                                    writeBuffer[index++] = (char) c;
                                 }
                                  break;
                         }
                         //updateUserInterface(sensor_val, MESSAGE_READ);
+
                     }
                     Thread.sleep(500);
                 } catch (IOException e) {
@@ -590,11 +589,11 @@ public class BluetoothService {
                 mmOutStream.write(buffer);
                 //Log.e("LHC", "Succeed to send msg:"+buffer.toString());
             } catch (IOException e) {
-                e.printStackTrace();
+                   e.printStackTrace();
             }
         }
 
-        public void write(String c) {
+        public void write(char c) {
             try {
                 mmOutRStream.write(c);
                 Log.e("LHC", "Succeed to send msg:"+c);

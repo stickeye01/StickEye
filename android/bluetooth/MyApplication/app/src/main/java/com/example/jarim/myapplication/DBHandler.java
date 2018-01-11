@@ -89,6 +89,7 @@ public class DBHandler {
                     "' and address='"+device_address+"'");
             Log.e("LHC", "DELETE DEVICE_NAME:"+device_name+", DEVICE_ADDRESS:"+device_address);
         }
+
         /*
          * select all data from db (for test)
          */
