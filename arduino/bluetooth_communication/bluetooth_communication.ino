@@ -5,14 +5,17 @@ int blue_Tx = 2;  //블루투스 모듈의 T(Transmitt)x를 Digital pin 9번에 
 int blue_Rx = 3;  //블루투스 모듈의 R(Receive)x를 Digital pin 10번에 연결
 int led_pin = 13;
 int bufferSize = 0;
-String maxid = "00:21:13:01:51:5D";
+//String mac_addr = "00:21:13:01:51:5D"; // 박효정 MAC_ID
+String mac_addr = "20:16:05:19:90:62"; // 이호찬 MAC_ID
 //00:21:13:01:51:5D//??
 
 int index;
 char data;
 char buffer[] = {'\r','m','s','g','\n'};
-String mode = "bluetooth";
 SoftwareSerial BTSerial(blue_Tx, blue_Rx);  //쓰기,읽기(RX,TX) 블루투스 모듈과 교차하여 연결됨
+
+int is_mac_sent = 1; // MAC_ID는 한번만 보내면 된다.
+
 /*안드로이드에서 전송 된 데이터는 블루투스 모듈로 수신되면 
  * 블루투스는 아두이노에 쓰기 작업 (Tx)
  * 아두이노는 읽기 작업 (Rx)
@@ -30,16 +33,13 @@ void setup(){
   index =0;
   bufferSize = 0;
 }
+
 void loop(){
-  if(mode.equals("serial")){
     serialMode();
-  }else if(mode.equals("bluetooth")){
-    bluetoothMode();
-    if(BTSerial.available()){
-      Serial.write(BTSerial.read());
-      delay(500);
-    }
-  }
+    //bluetoothMode();
+    //if(BTSerial.available()){
+    //  Serial.write(BTSerial.read());
+    //  delay(500);
 }
 
 void bluetoothMode(){
@@ -63,29 +63,28 @@ void bluetoothMode(){
 }
 
 void serialMode(){
-  if(BTSerial.available()){
-    String resp = BTSerial.readString();
-    Serial.print(resp);
-    delay(500);
-  }
-  /*안드로이드 -> 아두이노
-   * AT : AT mode 시작
-   * AT+NAME이름 : 블루투스 이름 변경
-   * 
-   */
   if(Serial.available()){
     String tmp = Serial.readString();
     Serial.print(tmp);
-    if(tmp.equals("bluetooth")){
-        Serial.println("change mode");
-        mode = "bluetooth"; 
-    }else if("maxid"){
-        Serial.println(maxid);
-    }else{
-       BTSerial.print(tmp);
+    /*
+     *  "MAC_ADDR" 이라는 명령을 안드로이드로부터 받으면,
+     *  실제 mac_address 전송.
+     */
+    if(tmp.equals("MAC_ADDR") and is_mac_sent == 1){
+        Serial.println(mac_addr);
+        writeString(mac_addr);
+        is_mac_sent = 0;
     }
-    delay(500);
+    delay(50);
   }
 }
 
-
+/**
+ *  string data를 편하게 write하기 위해 사용.
+ */
+void writeString(String stringData) {
+  for (int i = 0; i < stringData.length(); i++)
+  {
+    Serial.write(stringData[i]);   // Push each char 1 by 1 on each loop pass
+  }
+}
