@@ -227,12 +227,13 @@ public class MainActivity extends Activity implements OnClickListener {
                     txt_usb_stats.setText(Integer.toString(msg.arg1) + " device(s) found \n");
                     break;
                 case Constants.MSG_READ_DATA_COUNT:
-                    txt_usb_stats.setText(((String)msg.obj) + "\n");
+                    //txt_usb_stats.setText(((String)msg.obj) + "\n");
                     break;
                 case Constants.MSG_READ_DATA:
                     if(msg.obj != null) {
                         //mTextInfo.setText((String)msg.obj);
-                        txt_usb_stats.setText((String)msg.obj);
+                        txt_usb_stats.setText("");
+                        txt_usb_stats.append((String)msg.obj);
                         txt_usb_stats.append("\n");
                     }
                     break;
@@ -243,7 +244,7 @@ public class MainActivity extends Activity implements OnClickListener {
                     mRegDialog.hide();
                     break;
                 case Constants.MSG_USB_CONN_SUCCESS:
-                    //Toast.makeText(aContext, "USB connection succeeds!!", Toast.LENGTH_LONG).show();
+                    Toast.makeText(aContext, "USB connection succeeds!!", Toast.LENGTH_SHORT).show();
                     mSerialConn.sendCommand("MAC_ADDR");
                     mDBOpenHandler.open();
                     mDBOpenHandler.delete("*", "*");

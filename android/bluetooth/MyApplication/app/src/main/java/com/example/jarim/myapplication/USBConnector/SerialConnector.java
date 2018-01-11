@@ -77,6 +77,7 @@ public class SerialConnector {
 
         if(mPort != null && cmd != null) {
             try {
+                Log.e("LHC", "send command: "+cmd);
                 mPort.write(cmd.getBytes(), cmd.length());		// Send to remote device
             }
             catch(IOException e) {
@@ -253,7 +254,7 @@ public class SerialConnector {
         @Override
         public void run()
         {
-            byte buffer[] = new byte[128];
+            byte buffer[] = new byte[1000];
 
             while(!Thread.interrupted())
             {
@@ -263,9 +264,10 @@ public class SerialConnector {
                     try {
                         // Read received buffer
                         int numBytesRead = mPort.read(buffer, 1000);
-                        if(numBytesRead > 0) {
-                            Log.d(tag, "run : read bytes = " + numBytesRead);
 
+                        if(numBytesRead > 0) {
+                            Log.e(tag, "run : read bytes = " + numBytesRead);
+                            Log.e("LHC", "run : read data = " + new String(buffer));
                             // Print message length
                             Message msg = mHandler.obtainMessage(Constants.MSG_READ_DATA_COUNT, numBytesRead, 0,
                                     new String(buffer));
@@ -276,7 +278,7 @@ public class SerialConnector {
                                 char c = (char)buffer[i];
                                 if(c == 'z') {
                                     // This is end signal. Send collected result to UI
-                                    if(mCmd.mStringBuffer != null && mCmd.mStringBuffer.length() < 20) {
+                                    if(mCmd.mStringBuffer != null) {
                                         Message msg1 = mHandler.obtainMessage(Constants.MSG_READ_DATA, 0, 0, mCmd.toString());
                                         mHandler.sendMessage(msg1);
                                     }
