@@ -51,6 +51,7 @@ public class SerialConnector {
 
     public void initialize() {
         // Everything is fine. Start serial monitoring thread.
+        finalize();
         startConnectingThread();
     }	// End of initialize()
 
@@ -58,9 +59,10 @@ public class SerialConnector {
         try {
             mDriver = null;
             stopThread();
-
             mPort.close();
             mPort = null;
+
+            Message msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY,0, 0, "USB port nullifies");
         } catch(Exception ex) {
             Message msg1 = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error: Cannot finalize serial connector \n" + ex.toString() + "\n");
             mHandler.sendMessage(msg1);
@@ -78,6 +80,8 @@ public class SerialConnector {
         if(mPort != null && cmd != null) {
             try {
                 Log.e("LHC", "send command: "+cmd);
+                Message msg1 = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY, 0, 0, "device"+mPort.getDriver()+"\nSend command: "+cmd+"\n");
+                mHandler.sendMessage(msg1);
                 mPort.write(cmd.getBytes(), cmd.length());		// Send to remote device
             }
             catch(IOException e) {
@@ -95,7 +99,12 @@ public class SerialConnector {
     private void startConnectingThread() {
         Log.d(tag, "Start a thread that attempts to connect serial networking");
         if (mConnectingThread != null) {
+            mConnectingThread.interrupt();
             mConnectingThread = null;
+        }
+        if (mSerialThread != null) {
+            mSerialThread.interrupt();
+            mSerialThread = null;
         }
 
         mConnectingThread = new SerialConnectingThread();
@@ -105,7 +114,7 @@ public class SerialConnector {
     // start thread
     private void startConnectedThread() {
         Log.d(tag, "Start serial monitoring thread");
-        Message msg1 = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Start serial monitoring thread \n");
+        Message msg1 = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY, 0, 0, "Start serial monitoring thread \n");
         mHandler.sendMessage(msg1);
         if(mSerialThread == null) {
             mSerialThread = new SerialMonitorThread();
@@ -157,6 +166,10 @@ public class SerialConnector {
             // Finalize
             finalizeThread();
             if (is_success) startConnectedThread();
+            else {
+                Message msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY, 0, 0, "ConnectingThread: failed to initialize");
+                mHandler.sendMessage(msg);
+            }
         }	// End of run()
 
         private boolean initialize()
@@ -217,10 +230,8 @@ public class SerialConnector {
                 return false;
             } finally {
             }
-
-            msg = mHandler.obtainMessage(Constants.MSG_USB_CONN_SUCCESS);
+            msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY, 0, 0, "USB port is activated\n");
             mHandler.sendMessage(msg);
-
             return true;
         }
 
@@ -255,7 +266,13 @@ public class SerialConnector {
         public void run()
         {
             byte buffer[] = new byte[1000];
+            Message msg;
+            final char mEndDelimiter = '\n';
+            final char mStartDelimiter = '\r';
+            boolean isStart = false;
 
+            msg = mHandler.obtainMessage(Constants.MSG_USB_CONN_SUCCESS);
+            mHandler.sendMessage(msg);
             while(!Thread.interrupted())
             {
                 if(mPort != null) {
@@ -264,36 +281,44 @@ public class SerialConnector {
                     try {
                         // Read received buffer
                         int numBytesRead = mPort.read(buffer, 1000);
-
+                        msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY, 0, 0, "Wait for data...\n");
+                        mHandler.sendMessage(msg);
                         if(numBytesRead > 0) {
                             Log.e(tag, "run : read bytes = " + numBytesRead);
                             Log.e("LHC", "run : read data = " + new String(buffer));
                             // Print message length
-                            Message msg = mHandler.obtainMessage(Constants.MSG_READ_DATA_COUNT, numBytesRead, 0,
+                            msg = mHandler.obtainMessage(Constants.MSG_READ_DATA_COUNT, numBytesRead, 0,
                                     new String(buffer));
                             mHandler.sendMessage(msg);
 
                             // Extract data from buffer
                             for(int i=0; i<numBytesRead; i++) {
                                 char c = (char)buffer[i];
-                                if(c == 'z') {
-                                    // This is end signal. Send collected result to UI
-                                    if(mCmd.mStringBuffer != null) {
-                                        Message msg1 = mHandler.obtainMessage(Constants.MSG_READ_DATA, 0, 0, mCmd.toString());
-                                        mHandler.sendMessage(msg1);
-                                    }
-                                } else {
-                                    mCmd.addChar(c);
+                                switch (c) {
+                                    case mStartDelimiter:
+                                        mCmd.initialize();
+                                        isStart = true;
+                                        break;
+                                    case mEndDelimiter:
+                                        msg = mHandler.obtainMessage(Constants.MSG_READ_DATA, 0, 0, mCmd.toString());
+                                        mHandler.sendMessage(msg);
+                                        isStart = false;
+                                        break;
+                                    default:
+                                        if (isStart) mCmd.addChar(c);
                                 }
                             }
                         } // End of if(numBytesRead > 0)
                     }
                     catch (IOException e) {
                         Log.e(tag, "IOException - mDriver.read: "+e.toString());
-                        Message msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # run: " + e.toString() + "\n");
+                        msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # run: " + e.toString() + "\n");
                         mHandler.sendMessage(msg);
                         mKillSign = true;
                     }
+                } else {
+                    msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY, 0, 0, "Port is null..\n");
+                    mHandler.sendMessage(msg);
                 }
 
                 try {

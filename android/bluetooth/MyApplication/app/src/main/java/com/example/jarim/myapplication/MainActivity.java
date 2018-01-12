@@ -227,14 +227,12 @@ public class MainActivity extends Activity implements OnClickListener {
                     txt_usb_stats.setText(Integer.toString(msg.arg1) + " device(s) found \n");
                     break;
                 case Constants.MSG_READ_DATA_COUNT:
-                    //txt_usb_stats.setText(((String)msg.obj) + "\n");
+                    txt_usb_stats.append("Read data from a serial port (bytes): " +
+                                                Integer.toString(msg.arg1)+"\n");
                     break;
                 case Constants.MSG_READ_DATA:
                     if(msg.obj != null) {
-                        //mTextInfo.setText((String)msg.obj);
-                        txt_usb_stats.setText("");
-                        txt_usb_stats.append((String)msg.obj);
-                        txt_usb_stats.append("\n");
+                        txt_usb_stats.setText((String)msg.obj+">>");
                     }
                     break;
                 case Constants.MSG_SERIAL_ERROR:
@@ -245,7 +243,7 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case Constants.MSG_USB_CONN_SUCCESS:
                     Toast.makeText(aContext, "USB connection succeeds!!", Toast.LENGTH_SHORT).show();
-                    mSerialConn.sendCommand("MAC_ADDR");
+                    mSerialConn.sendCommand("MAC_ADDR\0");
                     mDBOpenHandler.open();
                     mDBOpenHandler.delete("*", "*");
                     String device_address = mDBOpenHandler.select();
@@ -254,6 +252,9 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case Constants.MSG_CONN_FAIL:
                     //Toast.makeText(aContext, "USB connection fails!!", Toast.LENGTH_LONG).show();
+                    break;
+                case Constants.MSG_USB_NOTIFY:
+                    txt_usb_stats.append((String)msg.obj);
                     break;
             }
         }

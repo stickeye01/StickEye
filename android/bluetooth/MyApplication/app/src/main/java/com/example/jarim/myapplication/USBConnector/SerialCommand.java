@@ -33,13 +33,7 @@ public class SerialCommand {
     }
 
     public void addChar(char c) {
-        if(c < 0x00)
-            return;
-        if(c == 'a') {
-            initialize();
-        } else {
             mStringBuffer.append(c);
-        }
     }
 
     public String toString() {
