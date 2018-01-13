@@ -38,7 +38,6 @@ public class MainActivity extends Activity implements OnClickListener {
 
     // Layout
     private Button btn_connect;
-    private Button btn_send;
     private Button btn_register;
     private TextView txt_Result;
     private TextView txt_mac_id;
@@ -55,12 +54,10 @@ public class MainActivity extends Activity implements OnClickListener {
     // Register dialog
     private RegisterDialog mRegDialog;
     private SerialConnector mSerialConn;
-    private SerialListener usbListener;
     private usbHandler usbHandler;
 
     // Activity context
     private Context aContext;
-    int test_int = 0;
 
     /*
      * Check whether Bluetooth network is working or not.
@@ -107,9 +104,8 @@ public class MainActivity extends Activity implements OnClickListener {
                 new String[]{Manifest.permission.BLUETOOTH_ADMIN},
                 MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN);
 
-        // Main Layout
+        // Layout
         btn_connect = (Button) findViewById(R.id.btn_connect);
-        btn_send = (Button) findViewById(R.id.btn_send);
         btn_register = (Button) findViewById(R.id.btn_register);
         txt_Result = (TextView) findViewById(R.id.txt_result);
         txt_conn_stats = (TextView) findViewById(R.id.conn_stats);
@@ -117,7 +113,6 @@ public class MainActivity extends Activity implements OnClickListener {
         txt_serv_stats = (TextView) findViewById(R.id.server_stats);
         txt_usb_stats = (TextView) findViewById(R.id.usb_stat);
         btn_connect.setOnClickListener(this);
-        btn_send.setOnClickListener(this);
         btn_register.setOnClickListener(this);
 
         if(btService == null) {
@@ -133,6 +128,7 @@ public class MainActivity extends Activity implements OnClickListener {
         //    Log.e("LHC", "it does not support BLE");
         //}
 
+        // Initialize and start server thread.
         if(btService.getDeviceState()) {
             btService.enableBluetooth(SERVER_SIDE);
         } else {
@@ -140,16 +136,14 @@ public class MainActivity extends Activity implements OnClickListener {
         }
 
         usbHandler = new usbHandler();
-        usbListener = new SerialListener();
-        mSerialConn = new SerialConnector(getApplicationContext(), usbListener, usbHandler);
+        mSerialConn = new SerialConnector(getApplicationContext(), usbHandler);
         mRegDialog = new RegisterDialog(this);
         aContext = this;
 
-        // initialize all the things for checking.
-        // mSerialConn.initialize();
-
+        // Get registered device information.
         updateMACID();
 
+        // Attempts to connect Bluetooth.
         if(btService.getDeviceState()) {
             if (btService.getState() != BluetoothService.STATE_CONNECTED &&
                     btService.getSState() != BluetoothService.STATE_CONNECTED) {
@@ -171,14 +165,13 @@ public class MainActivity extends Activity implements OnClickListener {
             txt_mac_id.setText(Constants.macAddr);
             mDBOpenHandler.close();
         } else {
-        Toast.makeText(this, "USB handler is NULL", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "USB handler is NULL", Toast.LENGTH_LONG).show();
         }
     }
 
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
-            // Two options: client and server side.
             case R.id.btn_connect:
                 if(btService.getDeviceState()) {
                     if (btService.getState() != BluetoothService.STATE_CONNECTED &&
@@ -187,17 +180,9 @@ public class MainActivity extends Activity implements OnClickListener {
                     }
                 }
                 break;
-            // Send messages to other devices
-            case R.id.btn_send:
-                try {
-                    btService.write((byte[])("test"+Integer.toString(test_int++)+"\n").getBytes("UTF-8"));
-                } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                }
-                break;
             case R.id.btn_register:
                 mRegDialog.show();
-                txt_usb_stats.setText("");
+                txt_usb_stats.setText("Registering..");
                 mSerialConn.initialize();
                 break;
         }
@@ -207,13 +192,11 @@ public class MainActivity extends Activity implements OnClickListener {
         Log.d(TAG, "MainActivity: onActivityResult(" + resultCode + ")");
         switch (requestCode) {
             case REQUEST_CONNECT_DEVICE:
-                // Scan devices and
                 if(resultCode == Activity.RESULT_OK){
                     btService.getDeviceInfo(data);
                 }
                 break;
             case REQUEST_ENABLE_BT:
-                // When the request to enable Bluetooth returns.
                 if (resultCode != Activity.RESULT_OK) {
                     Log.d(TAG, "Bluetooth is not enabled");
                 } else {
@@ -231,22 +214,24 @@ public class MainActivity extends Activity implements OnClickListener {
         mRegDialog.dismiss();
     }
 
-
+    /**
+     *
+     */
     public class usbHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
             switch(msg.what) {
-                case Constants.MSG_DEVICD_INFO:
+                case Constants.MSG_DEVICD_INFO:  // Serial connected device information.
                     txt_usb_stats.setText((String)msg.obj);
                     break;
-                case Constants.MSG_DEVICE_COUNT:
+                case Constants.MSG_DEVICE_COUNT: // The number of connected device.
                     txt_usb_stats.setText(Integer.toString(msg.arg1) + " device(s) found \n");
                     break;
-                case Constants.MSG_READ_DATA_COUNT:
+                case Constants.MSG_READ_DATA_COUNT: // The number of gotten bytes.
                     txt_usb_stats.append("Read data from a serial port (bytes): " +
                                                 Integer.toString(msg.arg1)+"\n");
                     break;
-                case Constants.MSG_READ_DATA:
+                case Constants.MSG_READ_DATA: // Get data and register a device.
                     if(msg.obj != null) {
                         String data = (String) msg.obj;
                         txt_usb_stats.setText(data + ">>");
@@ -260,7 +245,9 @@ public class MainActivity extends Activity implements OnClickListener {
                             mDBOpenHandler.open();
                             mDBOpenHandler.deleteAll();
                             mDBOpenHandler.insert("target", device_address);
-                            Toast.makeText(getApplicationContext(), device_address+":"+Integer.toString(device_address.length()), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), device_address+":"+
+                                    Integer.toString(device_address.length()),
+                                    Toast.LENGTH_SHORT).show();
                             txt_mac_id.setText(data);
                             mDBOpenHandler.close();
                             mSerialConn.finalize();
@@ -268,50 +255,22 @@ public class MainActivity extends Activity implements OnClickListener {
                         }
                     }
                     break;
-                case Constants.MSG_SERIAL_ERROR:
+                case Constants.MSG_SERIAL_ERROR: // Error statement.
                     txt_usb_stats.setText((String)msg.obj);
                     break;
-                case Constants.MSG_DIALOG_HIDE:
+                case Constants.MSG_DIALOG_HIDE: // Hide dialogue.
                     mRegDialog.hide();
                     break;
-                case Constants.MSG_USB_CONN_SUCCESS:
-                    Toast.makeText(aContext, "USB connection succeeds!!", Toast.LENGTH_SHORT).show();
+                case Constants.MSG_USB_CONN_SUCCESS: // Notify that serial networking is achieved.
+                    Toast.makeText(aContext, "USB connection succeeds!!",
+                                            Toast.LENGTH_SHORT).show();
+                    // Send "MAC_ADDR\0" to the Arduino
                     mSerialConn.sendCommand("MAC_ADDR\0");
                     break;
                 case Constants.MSG_CONN_FAIL:
-                    //Toast.makeText(aContext, "USB connection fails!!", Toast.LENGTH_LONG).show();
                     break;
-                case Constants.MSG_USB_NOTIFY:
+                case Constants.MSG_USB_NOTIFY:  // Show normal messages.
                     txt_usb_stats.append((String)msg.obj);
-                    break;
-            }
-        }
-    }
-
-
-    public class SerialListener {
-        public void onReceive(int msg, int arg0, int arg1, String arg2, Object arg3) {
-            switch(msg) {
-                case Constants.MSG_DEVICD_INFO:
-                    txt_usb_stats.append(arg2);
-                    break;
-                case Constants.MSG_DEVICE_COUNT:
-                    txt_usb_stats.append(Integer.toString(arg0) + " device(s) found \n");
-                    break;
-                case Constants.MSG_READ_DATA_COUNT:
-                    txt_usb_stats.append(Integer.toString(arg0) + " buffer received \n");
-                    break;
-                case Constants.MSG_READ_DATA:
-                    if(arg3 != null) {
-                        txt_usb_stats.append((String)arg3);
-                        txt_usb_stats.append("\n");
-                    }
-                    break;
-                case Constants.MSG_SERIAL_ERROR:
-                    txt_usb_stats.append(arg2);
-                    break;
-                case Constants.MSG_FATAL_ERROR_FINISH_APP:
-                    //finish();
                     break;
             }
         }

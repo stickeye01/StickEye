@@ -24,7 +24,6 @@ public class SerialConnector {
     public static final String tag = "SerialConnector";
 
     private Context mContext;
-    private SerialListener mListener;
     private Handler mHandler;
 
     private SerialConnectingThread mConnectingThread;
@@ -44,9 +43,8 @@ public class SerialConnector {
     /*****************************************************
      *	Constructor, Initialize
      ******************************************************/
-    public SerialConnector(Context c, SerialListener l, Handler h) {
+    public SerialConnector(Context c, Handler h) {
         mContext = c;
-        mListener = l;
         mHandler = h;
     }
 

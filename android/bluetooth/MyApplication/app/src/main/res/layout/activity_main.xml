@@ -20,15 +20,6 @@
         android:layout_below="@+id/btn_connect"
         android:text="Hi" />
 
-    <Button
-        android:id="@+id/btn_send"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_toLeftOf="@+id/btn_register"
-        android:layout_toStartOf="@+id/btn_register"
-        android:text="send_msg" />
-
     <TextView
         android:id="@+id/mac_id"
         android:layout_width="wrap_content"
