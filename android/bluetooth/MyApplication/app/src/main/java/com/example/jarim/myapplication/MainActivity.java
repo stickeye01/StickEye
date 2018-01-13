@@ -3,7 +3,6 @@ package com.example.jarim.myapplication;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.os.Bundle;
 import android.app.Activity;
@@ -17,7 +16,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.jarim.myapplication.USBConnector.Constants;
 import com.example.jarim.myapplication.USBConnector.SerialConnector;
 
 import java.io.UnsupportedEncodingException;
@@ -62,7 +60,6 @@ public class MainActivity extends Activity implements OnClickListener {
 
     // Activity context
     private Context aContext;
-
     int test_int = 0;
 
     /*
@@ -149,12 +146,32 @@ public class MainActivity extends Activity implements OnClickListener {
         aContext = this;
 
         // initialize all the things for checking.
-        mSerialConn.initialize();
+        // mSerialConn.initialize();
+
+        updateMACID();
+
         if(btService.getDeviceState()) {
             if (btService.getState() != BluetoothService.STATE_CONNECTED &&
                     btService.getSState() != BluetoothService.STATE_CONNECTED) {
                 btService.enableBluetooth(CLIENT_SIDE);
             }
+        }
+    }
+
+    /**
+     *  select and update mac id.
+     */
+    public void updateMACID() {
+        if (mDBOpenHandler != null) {
+            mDBOpenHandler.open();
+            Constants.macAddr = mDBOpenHandler.select().
+                                    replace("\n", "").
+                                    replace("\n", "");
+            txt_usb_stats.setText(Constants.macAddr);
+            txt_mac_id.setText(Constants.macAddr);
+            mDBOpenHandler.close();
+        } else {
+        Toast.makeText(this, "USB handler is NULL", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -188,7 +205,6 @@ public class MainActivity extends Activity implements OnClickListener {
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         Log.d(TAG, "MainActivity: onActivityResult(" + resultCode + ")");
-
         switch (requestCode) {
             case REQUEST_CONNECT_DEVICE:
                 // Scan devices and
@@ -232,7 +248,24 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case Constants.MSG_READ_DATA:
                     if(msg.obj != null) {
-                        txt_usb_stats.setText((String)msg.obj+">>");
+                        String data = (String) msg.obj;
+                        txt_usb_stats.setText(data + ">>");
+                        // Complete input format:
+                        //   "\r20:03:04:....:02\n"
+                        if (data.length() == 19) {
+                            Log.e("LHC", "get data:"+data);
+                            Log.e("LHC", "data start:"+Integer.toString(data.length()));
+                            String device_address = data.replaceAll("\n", "").
+                                                        replace("\r", "");
+                            mDBOpenHandler.open();
+                            mDBOpenHandler.deleteAll();
+                            mDBOpenHandler.insert("target", device_address);
+                            Toast.makeText(getApplicationContext(), device_address+":"+Integer.toString(device_address.length()), Toast.LENGTH_SHORT).show();
+                            txt_mac_id.setText(data);
+                            mDBOpenHandler.close();
+                            mSerialConn.finalize();
+                            updateMACID();
+                        }
                     }
                     break;
                 case Constants.MSG_SERIAL_ERROR:
@@ -244,11 +277,6 @@ public class MainActivity extends Activity implements OnClickListener {
                 case Constants.MSG_USB_CONN_SUCCESS:
                     Toast.makeText(aContext, "USB connection succeeds!!", Toast.LENGTH_SHORT).show();
                     mSerialConn.sendCommand("MAC_ADDR\0");
-                    mDBOpenHandler.open();
-                    mDBOpenHandler.delete("*", "*");
-                    String device_address = mDBOpenHandler.select();
-                    txt_mac_id.setText(device_address);
-                    mDBOpenHandler.close();
                     break;
                 case Constants.MSG_CONN_FAIL:
                     //Toast.makeText(aContext, "USB connection fails!!", Toast.LENGTH_LONG).show();

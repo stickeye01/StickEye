@@ -16,6 +16,8 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
+
+import com.example.jarim.myapplication.Constants;
 import com.example.jarim.myapplication.MainActivity.SerialListener;
 
 public class SerialConnector {
@@ -297,9 +299,11 @@ public class SerialConnector {
                                 switch (c) {
                                     case mStartDelimiter:
                                         mCmd.initialize();
+                                        mCmd.addChar(c);
                                         isStart = true;
                                         break;
                                     case mEndDelimiter:
+                                        mCmd.addChar(c);
                                         msg = mHandler.obtainMessage(Constants.MSG_READ_DATA, 0, 0, mCmd.toString());
                                         mHandler.sendMessage(msg);
                                         isStart = false;

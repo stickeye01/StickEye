@@ -1,4 +1,4 @@
-package com.example.jarim.myapplication.USBConnector;
+package com.example.jarim.myapplication;
 
 /**
  * Created by hochan on 2018-01-06.
@@ -15,4 +15,5 @@ public class Constants {
     public static final int MSG_SERIAL_ERROR = -1;
     public static final int MSG_FATAL_ERROR_FINISH_APP = -2;
     public static final int MSG_CONN_FAIL = -3;
+    public static String macAddr = "";
 }

@@ -140,14 +140,11 @@ public class BluetoothService {
 
         if (btAdapter.isEnabled() && dev_type ==  CLIENT_SIDE) {
             Log.e(TAG, "Bluetooth Enable Now: Client Side");
-
             scanDevice();
         } else if (btAdapter.isEnabled() && dev_type == SERVER_SIDE) {
-
             startServer();
         } else {
             Log.e(TAG, "Bluetooth Enable Request");
-
             Intent i = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             mActivity.startActivityForResult(i, REQUEST_ENABLE_BT);
         }
@@ -164,11 +161,17 @@ public class BluetoothService {
         // mActivity --> DeviceListActivity --> mActivity
         mActivity.startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
 */
+        // TODO: if a device is not registerd,
+        // we need to notify and request to register the device.
+        Log.e("LHC", "TRY ADDR:"+Constants.macAddr+" LENGTH:"+Constants.macAddr.length());
+        if (Constants.macAddr == "" || Constants.macAddr.length() != 17)
+            return ;
 
-        setMACID("08:D4:2B:2C:31:F5");
+        //setMACID("08:D4:2B:2C:31:F5");
         //setMACID("00:21:13:01:51:5D");
-        setMACID("20:16:05:19:90:62");
-        getDeviceInfo(address);
+        //setMACID("20:16:05:19:90:62");
+        setMACID(Constants.macAddr);
+        getDeviceInfo(getMACID());
     }
 
     /*
@@ -563,7 +566,6 @@ public class BluetoothService {
                     Log.e(TAG, "["+Long.toString(this.getId())+"]ConnectedThread: Bluetooth Socket Connection fails!"+e.toString());
                     Log.e("LHC", "connectedThread socket info: "+mmSocket.toString());
                     e.printStackTrace();
-
                     try {
                         mmSocket.close();
                     } catch (IOException e2) {
@@ -571,11 +573,11 @@ public class BluetoothService {
                                 "Unable to close socket when connection failures",
                                 e2);
                     }
-
                     connectionFailed(threadType);
                     return;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
+                    connectionFailed(threadType);
                 }
             }
         }
@@ -601,8 +603,6 @@ public class BluetoothService {
                 e.printStackTrace();
             }
         }
-
-
 
         public void cancel() {
             try {
@@ -667,7 +667,7 @@ public class BluetoothService {
                             case STATE_CONNECTED:
                                 try {
                                     socket.close();
-                                    //updateUserInterface("Wait for connection...", MESSAGE_SERVER_STATE);
+
                                     Log.e("LHC", "BtServerThread: socket closed");
                                 } catch (IOException e) {
                                     Log.e("LHC",
