@@ -2,7 +2,11 @@ package com.example.jarim.myapplication;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.IntentFilter;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
 import android.support.v4.app.ActivityCompat;
 import android.os.Bundle;
 import android.app.Activity;
@@ -35,6 +39,7 @@ public class MainActivity extends Activity implements OnClickListener {
     int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     int MY_PERMISSIONS_REQUEST_BLUETOOTH = 1;
     int MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN = 1;
+    boolean MY_PERMISSION_SERIAL = false;
 
     // Layout
     private Button btn_connect;
@@ -81,6 +86,42 @@ public class MainActivity extends Activity implements OnClickListener {
                 case BluetoothService.MESSAGE_SERVER_STATE:
                     txt_serv_stats.setText((String)msg.obj);
                     break;
+            }
+        }
+    };
+    /*
+    * Broadcast Receiver for usb serial connection
+    *  ACTION_USB_DEVICE_DETACHED : usb disconnected. close connection and clear the connected devices.(finalize())
+    *  ACTION_USB_DEVICE_ATTACHED : usb connected. Get device information and Try to get permission.
+    *  ACTION_USB_PERMISSION : Try to get permission. if user allowed permission, open connection with arduino.(initialize())
+     */
+    BroadcastReceiver mUsbReceiver =new BroadcastReceiver(){
+        public void onReceive(Context context,Intent intent){
+            String action = intent.getAction();
+            if(UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)){
+                UsbDevice device =(UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                if(device !=null){
+                    if(mSerialConn!=null) {
+                        mSerialConn.finalize();
+                        MY_PERMISSION_SERIAL = false;
+                        txt_usb_stats.setText("A drive is NULL");
+                    }
+                }
+            }else if (Constants.ACTION_USB_PERMISSION.equals(action)) {
+                synchronized (this) {
+                    UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                    //allowed permission
+                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                        if(device != null){
+                            MY_PERMISSION_SERIAL = true;
+                            mSerialConn.initialize();
+                        }
+                    }
+                    //denied permission
+                    else {
+                        MY_PERMISSION_SERIAL = false;
+                    }
+                }
             }
         }
     };
@@ -140,6 +181,12 @@ public class MainActivity extends Activity implements OnClickListener {
         mRegDialog = new RegisterDialog(this);
         aContext = this;
 
+        //BroadReceiver for serial connection
+        IntentFilter filler = new IntentFilter("ACTION_USB_PERMISSION");
+        filler.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        filler.addAction(Constants.ACTION_USB_PERMISSION);
+        registerReceiver(mUsbReceiver, filler);
+
         // Get registered device information.
         updateMACID();
 
@@ -181,9 +228,19 @@ public class MainActivity extends Activity implements OnClickListener {
                 }
                 break;
             case R.id.btn_register:
-                mRegDialog.show();
+                if(mSerialConn!=null&&!MY_PERMISSION_SERIAL){
+                    txt_usb_stats.setText("Try to get device permission..");
+                    mSerialConn.obtainPermission();
+                }else {
+                    mRegDialog.show();
+                    txt_usb_stats.setText("Registering..");
+                    mSerialConn.initialize();
+                }
+
+               /* mRegDialog.show();
                 txt_usb_stats.setText("Registering..");
                 mSerialConn.initialize();
+                */
                 break;
         }
     }
@@ -212,6 +269,9 @@ public class MainActivity extends Activity implements OnClickListener {
         super.onDestroy();
         mSerialConn.finalize();
         mRegDialog.dismiss();
+
+        MY_PERMISSION_SERIAL = false;
+        unregisterReceiver(mUsbReceiver);
     }
 
     /**

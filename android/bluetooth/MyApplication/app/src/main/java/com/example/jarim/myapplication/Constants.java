@@ -15,5 +15,6 @@ public class Constants {
     public static final int MSG_SERIAL_ERROR = -1;
     public static final int MSG_FATAL_ERROR_FINISH_APP = -2;
     public static final int MSG_CONN_FAIL = -3;
+    public static final String ACTION_USB_PERMISSION ="com.example.jarim.USB_PERMISSION";
     public static String macAddr = "";
 }

@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
@@ -18,7 +20,6 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import com.example.jarim.myapplication.Constants;
-import com.example.jarim.myapplication.MainActivity.SerialListener;
 
 public class SerialConnector {
     public static final String tag = "SerialConnector";
@@ -59,14 +60,38 @@ public class SerialConnector {
         try {
             mDriver = null;
             stopThread();
-            mPort.close();
-            mPort = null;
+            if(mPort != null) {
+                mPort.close();
+                mPort = null;
+            }
 
             Message msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY,0, 0, "USB port nullifies");
         } catch(Exception ex) {
             Message msg1 = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error: Cannot finalize serial connector \n" + ex.toString() + "\n");
             mHandler.sendMessage(msg1);
         }
+    }
+
+    public void obtainPermission(){
+        Message msg = null;
+        UsbManager manager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
+        if (manager == null)
+            manager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
+        List<USBSerialDriver> availableDrivers = USBSerialProber.getDefaultProber().findAllDrivers(manager);
+        if (availableDrivers.isEmpty()) {
+            msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # A drive is NULL \n");
+            mHandler.sendMessage(msg);
+            return;
+        }
+        mDriver = availableDrivers.get(0);
+        if (mDriver == null) {
+            msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # A drive is NULL \n");
+            mHandler.sendMessage(msg);
+            return;
+        }
+        UsbDevice device = mDriver.getDevice();
+        PendingIntent mPermissionIntent = PendingIntent.getBroadcast(mContext, 0, new Intent(Constants.ACTION_USB_PERMISSION), 0);
+        manager.requestPermission(device, mPermissionIntent);
     }
 
 
