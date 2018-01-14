@@ -17,4 +17,6 @@ public class Constants {
     public static final int MSG_CONN_FAIL = -3;
     public static final String ACTION_USB_PERMISSION ="com.example.jarim.USB_PERMISSION";
     public static String macAddr = "";
+    public static final int TIMEOUT = 30000;
+
 }

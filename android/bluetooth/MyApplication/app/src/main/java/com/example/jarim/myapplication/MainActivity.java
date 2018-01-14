@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.os.CountDownTimer;
 import android.support.v4.app.ActivityCompat;
 import android.os.Bundle;
 import android.app.Activity;
@@ -60,6 +61,14 @@ public class MainActivity extends Activity implements OnClickListener {
     private RegisterDialog mRegDialog;
     private SerialConnector mSerialConn;
     private usbHandler usbHandler;
+    private final Handler mRegDialogHandler = new Handler();
+    private final Runnable mDismissRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if(mRegDialog != null && mRegDialog.isShowing())
+                mRegDialog.hide();
+        }
+    };
 
     // Activity context
     private Context aContext;
@@ -98,16 +107,16 @@ public class MainActivity extends Activity implements OnClickListener {
     BroadcastReceiver mUsbReceiver =new BroadcastReceiver(){
         public void onReceive(Context context,Intent intent){
             String action = intent.getAction();
-            if(UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)){
+            if(UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
                 UsbDevice device =(UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                if(device !=null){
-                    if(mSerialConn!=null) {
+                if(device != null){
+                    if(mSerialConn != null) {
                         mSerialConn.finalize();
                         MY_PERMISSION_SERIAL = false;
                         txt_usb_stats.setText("A drive is NULL");
                     }
                 }
-            }else if (Constants.ACTION_USB_PERMISSION.equals(action)) {
+            } else if (Constants.ACTION_USB_PERMISSION.equals(action)) {
                 synchronized (this) {
                     UsbDevice device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     //allowed permission
@@ -129,6 +138,7 @@ public class MainActivity extends Activity implements OnClickListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.e("LHC", "Handler thread ID:"+Thread.currentThread().getId());
         Log.e(TAG, "onCreate");
         setContentView(R.layout.activity_main);
         // Permission
@@ -228,19 +238,15 @@ public class MainActivity extends Activity implements OnClickListener {
                 }
                 break;
             case R.id.btn_register:
-                if(mSerialConn!=null&&!MY_PERMISSION_SERIAL){
+                mRegDialog.show();
+                mRegDialogHandler.postDelayed(mDismissRunnable, Constants.TIMEOUT);
+                if(mSerialConn != null && !MY_PERMISSION_SERIAL){
                     txt_usb_stats.setText("Try to get device permission..");
                     mSerialConn.obtainPermission();
-                }else {
-                    mRegDialog.show();
+                } else {
                     txt_usb_stats.setText("Registering..");
                     mSerialConn.initialize();
                 }
-
-               /* mRegDialog.show();
-                txt_usb_stats.setText("Registering..");
-                mSerialConn.initialize();
-                */
                 break;
         }
     }
@@ -294,10 +300,10 @@ public class MainActivity extends Activity implements OnClickListener {
                 case Constants.MSG_READ_DATA: // Get data and register a device.
                     if(msg.obj != null) {
                         String data = (String) msg.obj;
-                        txt_usb_stats.setText(data + ">>");
                         // Complete input format:
                         //   "\r20:03:04:....:02\n"
                         if (data.length() == 19) {
+                            txt_usb_stats.setText(data);
                             Log.e("LHC", "get data:"+data);
                             Log.e("LHC", "data start:"+Integer.toString(data.length()));
                             String device_address = data.replaceAll("\n", "").
@@ -309,8 +315,11 @@ public class MainActivity extends Activity implements OnClickListener {
                                     Integer.toString(device_address.length()),
                                     Toast.LENGTH_SHORT).show();
                             txt_mac_id.setText(data);
+                            if (mRegDialog.isShowing()) mRegDialog.hide();
                             mDBOpenHandler.close();
                             mSerialConn.finalize();
+                            //Log.e("LHC", "Handler thread ID:"+Thread.currentThread().getId());
+                            Toast.makeText(getApplicationContext(), "threads are finished", Toast.LENGTH_SHORT).show();
                             updateMACID();
                         }
                     }
@@ -319,7 +328,7 @@ public class MainActivity extends Activity implements OnClickListener {
                     txt_usb_stats.setText((String)msg.obj);
                     break;
                 case Constants.MSG_DIALOG_HIDE: // Hide dialogue.
-                    mRegDialog.hide();
+                    if (mRegDialog.isShowing()) mRegDialog.hide();
                     break;
                 case Constants.MSG_USB_CONN_SUCCESS: // Notify that serial networking is achieved.
                     Toast.makeText(aContext, "USB connection succeeds!!",

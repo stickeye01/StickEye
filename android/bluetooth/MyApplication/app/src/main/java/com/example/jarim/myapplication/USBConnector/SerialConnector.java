@@ -39,8 +39,6 @@ public class SerialConnector {
     public static final int TARGET_VENDOR_ID4 = 6790;	// CH340G
     public static final int TARGET_VENDOR_ID5 = 4292;	// CP210x
     public static final int BAUD_RATE = 115200;
-
-
     /*****************************************************
      *	Constructor, Initialize
      ******************************************************/
@@ -64,8 +62,6 @@ public class SerialConnector {
                 mPort.close();
                 mPort = null;
             }
-
-            Message msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY,0, 0, "USB port nullifies");
         } catch(Exception ex) {
             Message msg1 = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error: Cannot finalize serial connector \n" + ex.toString() + "\n");
             mHandler.sendMessage(msg1);
@@ -85,7 +81,7 @@ public class SerialConnector {
         }
         mDriver = availableDrivers.get(0);
         if (mDriver == null) {
-            msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # A drive is NULL \n");
+            msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # B drive is NULL \n");
             mHandler.sendMessage(msg);
             return;
         }
@@ -145,6 +141,11 @@ public class SerialConnector {
             mSerialThread = new SerialMonitorThread();
             mSerialThread.start();
         }
+        if(mConnectingThread != null && mConnectingThread.isAlive())
+            mConnectingThread.interrupt();
+        if(mConnectingThread != null) {
+            mConnectingThread = null;
+        }
     }
 
     // stop thread
@@ -164,13 +165,6 @@ public class SerialConnector {
 
 
     public class SerialConnectingThread extends Thread {
-        private void finalizeThread() {
-            // hide dialog.
-            Message msg = mHandler.obtainMessage(Constants.MSG_DIALOG_HIDE);
-            mHandler.sendMessage(msg);
-            stopThread();
-        }
-
         /**
          *	Main loop
          **/
@@ -180,16 +174,16 @@ public class SerialConnector {
             int startTime = 0;
             boolean is_success = false;
             while (!Thread.interrupted()) {
-                if (startTime >= 30000) break;
+                if (startTime >= Constants.TIMEOUT) break;
                 if (initialize()) {
                     is_success = true;
                     break;
                 }
                 startTime += 10;
                 SystemClock.sleep(10);
+                Log.e("LHC", "timer1: "+Integer.toString(startTime));
             }
-            // Finalize
-            finalizeThread();
+
             if (is_success) startConnectedThread();
             else {
                 Message msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY, 0, 0, "ConnectingThread: failed to initialize");
@@ -295,18 +289,29 @@ public class SerialConnector {
             final char mEndDelimiter = '\n';
             final char mStartDelimiter = '\r';
             boolean isStart = false;
-
             msg = mHandler.obtainMessage(Constants.MSG_USB_CONN_SUCCESS);
             mHandler.sendMessage(msg);
+            int startTime = 0;
+            Log.e("LHC", "monitor Handler ID:"+Thread.currentThread().getId());
+
             while(!Thread.interrupted())
             {
+                if(startTime >= Constants.TIMEOUT)  {
+                    mKillSign = true;
+                    msg = mHandler.obtainMessage(Constants.MSG_DIALOG_HIDE);
+                    mHandler.sendMessage(msg);
+                }
+
+                if (mKillSign) {
+                    break;
+                }
+
                 if(mPort != null) {
                     Arrays.fill(buffer, (byte)0x00);
-
                     try {
                         // Read received buffer
                         int numBytesRead = mPort.read(buffer, 1000);
-                        msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY, 0, 0, "Wait for data...\n");
+                        msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY, 0, 0, "\nWait for data...\n");
                         mHandler.sendMessage(msg);
                         if(numBytesRead > 0) {
                             Log.e(tag, "run : read bytes = " + numBytesRead);
@@ -330,6 +335,7 @@ public class SerialConnector {
                                         msg = mHandler.obtainMessage(Constants.MSG_READ_DATA, 0, 0, mCmd.toString());
                                         mHandler.sendMessage(msg);
                                         isStart = false;
+                                        setKillSign(true);
                                         break;
                                     default:
                                         if (isStart) mCmd.addChar(c);
@@ -349,15 +355,13 @@ public class SerialConnector {
                 }
 
                 try {
-                    Thread.sleep(100);
+                    startTime += 10;
+                    Thread.sleep(10);
+                    Log.e("LHC", "timer:"+Integer.toString(startTime));
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     break;
                 }
-
-                if(mKillSign)
-                    break;
-
             }	// End of while() loop
 
             // Finalize

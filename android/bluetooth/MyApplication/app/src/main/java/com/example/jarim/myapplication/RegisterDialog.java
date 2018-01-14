@@ -5,6 +5,9 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.view.MotionEvent;
@@ -29,6 +32,7 @@ public class RegisterDialog extends Dialog {
 
         animTransRight = AnimationUtils.loadAnimation(mContext, R.anim.translate);
 
+        setCancelable(false);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         setContentView(R.layout.register_dialog);
