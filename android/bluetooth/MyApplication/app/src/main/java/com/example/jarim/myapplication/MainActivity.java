@@ -54,6 +54,10 @@ public class MainActivity extends Activity implements OnClickListener {
     // Bluetooth
     private BluetoothService btService = null;
 
+    //tts
+    TtsService tts = null;
+
+
     // Database
     private DBHandler mDBOpenHandler;
 
@@ -154,7 +158,6 @@ public class MainActivity extends Activity implements OnClickListener {
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.BLUETOOTH_ADMIN},
                 MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN);
-
         // Layout
         btn_connect = (Button) findViewById(R.id.btn_connect);
         btn_register = (Button) findViewById(R.id.btn_register);
@@ -230,6 +233,8 @@ public class MainActivity extends Activity implements OnClickListener {
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.btn_connect:
+                //TTS TEST
+                tts.sspeak("블루투스 접속 요청되었습니다.");
                 if(btService.getDeviceState()) {
                     if (btService.getState() != BluetoothService.STATE_CONNECTED &&
                             btService.getSState() != BluetoothService.STATE_CONNECTED) {
