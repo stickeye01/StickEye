@@ -92,6 +92,8 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case BluetoothService.MESSAGE_STATE_CHANGE:
                     txt_conn_stats.setText((String)msg.obj);
+                    if (((String)msg.obj).equals("Connected!"))
+                        tts.ispeak("블루투스 연결이 성공하였습니다.");
                     break;
                 case BluetoothService.MESSAGE_MAC_ID_CHANGE:
                     txt_mac_id.setText((String)msg.obj);
@@ -145,6 +147,10 @@ public class MainActivity extends Activity implements OnClickListener {
         Log.e("LHC", "Handler thread ID:"+Thread.currentThread().getId());
         Log.e(TAG, "onCreate");
         setContentView(R.layout.activity_main);
+        // TTS
+        tts = new TtsService();
+        tts.init(this);
+
         // Permission
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
@@ -243,6 +249,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 }
                 break;
             case R.id.btn_register:
+                tts.ispeak("장치 등록이 요청되었습니다. USB를 통해 지팡이를 연결해주세요.");
                 mRegDialog.show();
                 mRegDialogHandler.postDelayed(mDismissRunnable, Constants.TIMEOUT);
                 if(mSerialConn != null && !MY_PERMISSION_SERIAL){
@@ -326,6 +333,7 @@ public class MainActivity extends Activity implements OnClickListener {
                             //Log.e("LHC", "Handler thread ID:"+Thread.currentThread().getId());
                             Toast.makeText(getApplicationContext(), "threads are finished", Toast.LENGTH_SHORT).show();
                             updateMACID();
+                            tts.ispeak("USB를 통해 장치 등록을 완료하였습니다.");
                         }
                     }
                     break;
@@ -340,6 +348,7 @@ public class MainActivity extends Activity implements OnClickListener {
                                             Toast.LENGTH_SHORT).show();
                     // Send "MAC_ADDR\0" to the Arduino
                     mSerialConn.sendCommand("MAC_ADDR\0");
+                    tts.ispeak("USB로 장치가 접속되었습니다.");
                     break;
                 case Constants.MSG_CONN_FAIL:
                     break;
