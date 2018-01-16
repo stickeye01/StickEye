@@ -84,11 +84,10 @@ public class DBHandler {
         /*
          * delete db
          */
-        public void delete(SQLiteDatabase sqLiteDatabase, String device_name, String device_address) {
-            sqLiteDatabase.execSQL("DELETE FROM "+CreateDB._TABLENAME+" WHERE device='" +device_name+
-                    "' and address='"+device_address+"'");
-            Log.e("LHC", "DELETE DEVICE_NAME:"+device_name+", DEVICE_ADDRESS:"+device_address);
+        public void deleteAll(SQLiteDatabase sqLiteDatabase) {
+            sqLiteDatabase.delete(CreateDB._TABLENAME, null, null);
         }
+
         /*
          * select all data from db (for test)
          */
@@ -121,14 +120,15 @@ public class DBHandler {
 
     public DBHandler insert(String device_name, String device_address) {
         mDB = mDBController.getWritableDatabase();
+        Log.e("LHC", "DB insert:"+device_address+", LENGHT:"+device_address.length());
         mDBController.insert(mDB, device_name, device_address);
         mDB.close();
         return this;
     }
 
-    public DBHandler delete(String device_name, String device_address) {
+    public DBHandler deleteAll() {
         mDB = mDBController.getWritableDatabase();
-        mDBController.delete(mDB, device_name, device_address);
+        mDBController.deleteAll(mDB);
         mDB.close();
         return this;
     }
@@ -138,6 +138,7 @@ public class DBHandler {
         mDB = mDBController.getReadableDatabase();
         results = mDBController.select(mDB);
         mDB.close();
+        Log.e("LHC", "DB select:"+results);
         return results;
     }
 
