@@ -18,12 +18,10 @@ public class TtsService {
     public void init(Context context) {
         try {
             mTts = new TextToSpeech(context, onInitListener);
-            Log.e("error", "badook");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
 
     //complete initializing
     private TextToSpeech.OnInitListener onInitListener = new TextToSpeech.OnInitListener() {
@@ -41,7 +39,11 @@ public class TtsService {
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                     Log.e("error", "This Language is not supported");
                 }
+
+                // When the TTS initialization succeeds, speak it out.
+                sspeak("앱이 실행되었습니다.");
             } else {
+                sspeak("음성 출력이 실패하였습니다.");
                 Log.e("error", "Initialization Failed!");
             }
         }
@@ -52,16 +54,13 @@ public class TtsService {
         mTts.shutdown();
     }
 
-    //add the string to the queue. if the queue is not initalized, error occurs
-    public void addQueue(String text) {
+    // ignore and speak
+    public void sspeak(String text) {
             mTts.speak(text, TextToSpeech.QUEUE_ADD, null);
-
     }
 
-    //intializing the queue
-    public void initQueue(String text) {
-
+    // speak after speak
+    public void ispeak(String text) {
         mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
-
     }
 }

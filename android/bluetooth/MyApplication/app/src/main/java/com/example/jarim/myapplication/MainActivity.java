@@ -124,8 +124,7 @@ public class MainActivity extends Activity implements OnClickListener {
             btService = new BluetoothService(this, mHandler);
 
             //TTS TEST
-            //String text = "서비스가 시작되었습니다";
-            //tts.initQueue(text);
+            tts.sspeak("앱이 실행되었습니다.");
         }
 
         mDBOpenHandler = new DBHandler(this);
@@ -150,6 +149,8 @@ public class MainActivity extends Activity implements OnClickListener {
         switch (v.getId()) {
             // Two options: client and server side.
             case R.id.btn_connect:
+                //TTS TEST
+                tts.sspeak("블루투스 접속 요청되었습니다.");
                 if(btService.getDeviceState()) {
                     if (btService.getState() != BluetoothService.STATE_CONNECTED &&
                             btService.getSState() != BluetoothService.STATE_CONNECTED) {
@@ -161,6 +162,8 @@ public class MainActivity extends Activity implements OnClickListener {
                 break;
             // Send messages to other devices
             case R.id.btn_send:
+                tts.sspeak("블루투스 메세지 전송 요청되었습니다.");
+                tts.sspeak("그래서?");
                 try {
                     btService.write((byte[])("test"+Integer.toString(test_int++)+"\n").getBytes("UTF-8"));
                 } catch (UnsupportedEncodingException e) {
@@ -168,6 +171,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 }
                 break;
             case R.id.btn_register:
+                tts.sspeak("장치 등록 요청되었습니다.");
                 mDBOpenHandler.open();
                 mDBOpenHandler.insert("target","08:D4:2B:2C:31:F5");
                 String device_address = mDBOpenHandler.select();
