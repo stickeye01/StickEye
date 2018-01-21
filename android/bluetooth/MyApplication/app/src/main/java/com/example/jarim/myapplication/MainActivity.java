@@ -34,8 +34,6 @@ public class MainActivity extends Activity implements OnClickListener {
     // Intent request code
     private static final int REQUEST_CONNECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
-    private static final int SERVER_SIDE = 1;
-    private static final int CLIENT_SIDE = 2;
 
     // permission
     int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 1;
@@ -95,9 +93,6 @@ public class MainActivity extends Activity implements OnClickListener {
                 case BluetoothService.MESSAGE_STATE_CHANGE:
                     String status = (String)msg.obj;
                     txt_conn_stats.setText(status);
-                    if (status.equals("Connected!")) {
-                        tts.ispeak("블루투스 연결이 성공하였습니다.");
-                    }
                     break;
                 case BluetoothService.MESSAGE_MAC_ID_CHANGE:
                     txt_mac_id.setText((String)msg.obj);
@@ -176,6 +171,7 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case BluetoothDevice.ACTION_ACL_DISCONNECTED:
                     bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    btService.initialize();
                     tts.ispeak("블루투스 연결이 실패하였습니다.");
                     txt_conn_stats.setText("Disconnected!");
                     break;
@@ -234,13 +230,6 @@ public class MainActivity extends Activity implements OnClickListener {
         //    Log.e("LHC", "it does not support BLE");
         //}
 
-        // Initialize and start server thread.
-        if(btService.getDeviceState()) {
-            btService.enableBluetooth(SERVER_SIDE);
-        } else {
-            finish();
-        }
-
         usbHandler = new usbHandler();
         mSerialConn = new SerialConnector(getApplicationContext(), usbHandler);
         mRegDialog = new RegisterDialog(this);
@@ -257,9 +246,8 @@ public class MainActivity extends Activity implements OnClickListener {
 
         // Attempts to connect Bluetooth.
         if(btService.getDeviceState()) {
-            if (btService.getState() != BluetoothService.STATE_CONNECTED &&
-                    btService.getSState() != BluetoothService.STATE_CONNECTED) {
-                btService.enableBluetooth(CLIENT_SIDE);
+            if (btService.getState() != BluetoothService.STATE_CONNECTED) {
+                btService.enableBluetooth();
             }
         }
 
@@ -296,14 +284,16 @@ public class MainActivity extends Activity implements OnClickListener {
                 //TTS TEST
                 tts.sspeak("블루투스 접속 요청되었습니다.");
                 if(btService.getDeviceState()) {
-                    if (btService.getState() != BluetoothService.STATE_CONNECTED &&
-                            btService.getSState() != BluetoothService.STATE_CONNECTED) {
-                        btService.enableBluetooth(CLIENT_SIDE);
+                    if (btService.getState() != BluetoothService.STATE_CONNECTED) {
+                        btService.enableBluetooth();
                     }
+                } else {
+
                 }
                 break;
             case R.id.btn_register:
-                tts.ispeak("장치 등록이 요청되었습니다. USB를 통해 지팡이를 연결해주세요.");
+                tts.ispeak("장치 등록이 요청되었습니다. " +
+                        "USB를 통해 지팡이를 연결해주세요.");
                 mRegDialog.show();
                 mRegDialogHandler.postDelayed(mDismissRunnable, Constants.TIMEOUT);
                 if(mSerialConn != null && !MY_PERMISSION_SERIAL){
@@ -326,12 +316,6 @@ public class MainActivity extends Activity implements OnClickListener {
                 }
                 break;
             case REQUEST_ENABLE_BT:
-                if (resultCode != Activity.RESULT_OK) {
-                    Log.d(TAG, "Bluetooth is not enabled");
-                } else {
-                    // repetitively activate server.
-                    btService.enableBluetooth(SERVER_SIDE);
-                }
                 break;
         }
     }
@@ -372,8 +356,6 @@ public class MainActivity extends Activity implements OnClickListener {
                         //   "\r20:03:04:....:02\n"
                         if (data.length() == 19) {
                             txt_usb_stats.setText(data);
-                            Log.e("LHC", "get data:"+data);
-                            Log.e("LHC", "data start:"+Integer.toString(data.length()));
                             String device_address = data.replaceAll("\n", "").
                                                         replace("\r", "");
                             mDBOpenHandler.open();
@@ -386,8 +368,6 @@ public class MainActivity extends Activity implements OnClickListener {
                             if (mRegDialog.isShowing()) mRegDialog.hide();
                             mDBOpenHandler.close();
                             mSerialConn.finalize();
-                            //Log.e("LHC", "Handler thread ID:"+Thread.currentThread().getId());
-                            Toast.makeText(getApplicationContext(), "threads are finished", Toast.LENGTH_SHORT).show();
                             updateMACID();
                             tts.ispeak("USB를 통해 장치 등록을 완료하였습니다.");
                         }
@@ -400,8 +380,6 @@ public class MainActivity extends Activity implements OnClickListener {
                     if (mRegDialog.isShowing()) mRegDialog.hide();
                     break;
                 case Constants.MSG_USB_CONN_SUCCESS: // Notify that serial networking is achieved.
-                    Toast.makeText(aContext, "USB connection succeeds!!",
-                                            Toast.LENGTH_SHORT).show();
                     // Send "MAC_ADDR\0" to the Arduino
                     mSerialConn.sendCommand("MAC_ADDR\0");
                     tts.ispeak("USB로 장치가 접속되었습니다.");

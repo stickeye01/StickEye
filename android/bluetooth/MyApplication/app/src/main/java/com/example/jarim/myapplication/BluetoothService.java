@@ -46,8 +46,6 @@ public class BluetoothService {
     // Intent request code
     private static final int REQUEST_CONNECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
-    private static final int SERVER_SIDE = 1;
-    private static final int CLIENT_SIDE = 2;
 
     // RFCOMM Protocol
     private static final UUID MY_UUID = UUID
@@ -60,8 +58,6 @@ public class BluetoothService {
 
     private ConnectThread mConnectThread; // a thread is being used for connection
     private ConnectedThread mConnectedThread; // a thread is used for communicate
-    private BtServerThread mServerThread;
-    private ConnectedThread mServerConnectedThread;
 
     private int mState;
     private int mSState;
@@ -114,7 +110,6 @@ public class BluetoothService {
                 resultStr = "Connected! and wait for data..";
                 return resultStr;
         }
-
         return resultStr;
     }
 
@@ -135,14 +130,12 @@ public class BluetoothService {
     /*
      * Check the enabled Bluetooth.
      */
-    public void enableBluetooth(int dev_type) {
+    public void enableBluetooth() {
         Log.e(TAG, "Check the enabled Bluetooth");
 
-        if (btAdapter.isEnabled() && dev_type ==  CLIENT_SIDE) {
+        if (btAdapter.isEnabled()) {
             Log.e(TAG, "Bluetooth Enable Now: Client Side");
             scanDevice();
-        } else if (btAdapter.isEnabled() && dev_type == SERVER_SIDE) {
-            startServer();
         } else {
             Log.e(TAG, "Bluetooth Enable Request");
             Intent i = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -154,16 +147,7 @@ public class BluetoothService {
      * Scan devices.
      */
     public void scanDevice() {
-        Log.e(TAG, "Scan Device....");
-
-        /*
-        Intent serverIntent = new Intent(mActivity, DeviceListActivity.class);
-        // mActivity --> DeviceListActivity --> mActivity
-        mActivity.startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
-*/
-        // TODO: if a device is not registerd,
         // we need to notify and request to register the device.
-        Log.e("LHC", "TRY ADDR:"+Constants.macAddr+" LENGTH:"+Constants.macAddr.length());
         if (Constants.macAddr == "" || Constants.macAddr.length() != 17)
             return ;
 
@@ -181,9 +165,6 @@ public class BluetoothService {
         String address = data.getExtras().getString(
                 DeviceListActivity.EXTRA_DEVICE_ADDRESS);
         BluetoothDevice device = btAdapter.getRemoteDevice(address);
-
-        Log.d(TAG, "Get Device Info \n" + "address : " + address);
-
         connect(device);
     }
 
@@ -192,10 +173,6 @@ public class BluetoothService {
      */
     public void getDeviceInfo(String addr) {
         BluetoothDevice device = btAdapter.getRemoteDevice(addr);
-
-        Log.e(TAG, "Get Device Info \n" + "address : " + addr);
-        Log.e("LHC", "Device Info:"+device.toString());
-
         connect(device);
     }
 
@@ -203,8 +180,6 @@ public class BluetoothService {
      * Remove current executing threads and initialize all threads.
      */
     public synchronized void connect(BluetoothDevice device) {
-        Log.e(TAG, "connect to: " + device);
-
         if (mConnectThread != null) {
             mConnectThread.cancel();
             mConnectThread = null;
@@ -214,16 +189,6 @@ public class BluetoothService {
             Log.e("LHC", "connect(): mConnectedThread closed");
             mConnectedThread.cancel();
             mConnectedThread = null;
-        }
-
-        if (mServerConnectedThread != null) {
-            mServerConnectedThread.cancel();
-            mServerConnectedThread = null;
-        }
-
-        if (mServerThread != null) {
-            mServerThread.cancel();
-            mServerThread = null;
         }
 
         // Start a thread that connects with the given device
@@ -258,58 +223,34 @@ public class BluetoothService {
         return mState;
     }
 
-
-    /*
-     * Set server states of the device.
-     */
-    private synchronized void setSState(int state) {
-        mSState = state;
-    }
-
-    /*
-     * Get the server state.
-     */
-    public synchronized int getSState() {
-        return mSState;
-    }
-
-    public synchronized  void startServer() {
-        mServerThread = new BtServerThread();
-        mServerThread.start();
-    }
-
     /*
      * Nullify all the threads.
      */
     public synchronized void initialize() {
-        if (mConnectThread != null) {
+        Log.e("LHC", "stop()");
+        setState(STATE_NONE);
+        if (mConnectThread != null && mConnectThread.isAlive()) {
+            mConnectThread.interrupt();
             mConnectThread.cancel();
             mConnectThread = null;
         }
 
-        if (mConnectedThread != null) {
+        if (mConnectThread != null) mConnectThread = null;
+
+        if (mConnectedThread != null && mConnectedThread.isAlive()) {
+            mConnectedThread.interrupt();
             mConnectedThread.cancel();
             mConnectedThread = null;
         }
 
-        if (mServerConnectedThread != null) {
-            mServerConnectedThread.cancel();
-            mServerConnectedThread = null;
-        }
-
-        if (mServerThread != null) {
-            mServerThread.cancel();
-            mServerThread = null;
-        }
-
+        if (mConnectedThread != null) mConnectedThread = null;
     }
 
     /*
      * Nullify all the threads and start to connect with the device.
      */
     public synchronized void connected(BluetoothSocket socket,
-                                       BluetoothDevice device,
-                                       int side_type) {
+                                       BluetoothDevice device) {
         if (mConnectThread != null) {
             mConnectThread.cancel();
             mConnectThread = null;
@@ -320,45 +261,32 @@ public class BluetoothService {
             mConnectedThread = null;
         }
 
-        Log.e("LHC", "connected()");
         // Start to next phase by generating mConnectedThread.
         // It is going to perform actual Bluetooth networking.
-        if (side_type == CLIENT_SIDE) {
-            mConnectedThread = new ConnectedThread(socket, CLIENT_SIDE);
-            mConnectedThread.start();
-        }
-        else if (side_type == SERVER_SIDE && mServerConnectedThread == null) {
-            mServerConnectedThread = new ConnectedThread(socket, SERVER_SIDE);
-            mServerConnectedThread.start();
-        }
+        mConnectedThread = new ConnectedThread(socket);
+        mConnectedThread.start();
     }
 
     /*
      * Stop and nullify all the threads
      */
     public synchronized void stop() {
-        if (mConnectThread != null) {
+        setState(STATE_NONE);
+        if (mConnectThread != null && mConnectThread.isAlive()) {
+            mConnectThread.interrupt();
             mConnectThread.cancel();
             mConnectThread = null;
         }
 
-        if (mConnectedThread != null) {
+        if (mConnectThread != null) mConnectThread = null;
+
+        if (mConnectedThread != null && mConnectedThread.isAlive()) {
+            mConnectedThread.interrupt();
             mConnectedThread.cancel();
             mConnectedThread = null;
         }
 
-        if (mServerConnectedThread != null) {
-            mServerConnectedThread.cancel();
-            mServerConnectedThread = null;
-        }
-
-        if (mServerThread != null) {
-            mServerThread.cancel();
-            mServerThread = null;
-        }
-
-        Log.e("LHC", "stop()");
-        setState(STATE_NONE);
+        if (mConnectedThread != null) mConnectedThread = null;
     }
 
     /*
@@ -375,13 +303,9 @@ public class BluetoothService {
         r.write(out);
     }
 
-    private void connectionFailed(int threadType) {
-        Log.e("LHC", "connectionFailed()");
-        if (threadType == SERVER_SIDE)  setSState(STATE_NONE);
-        else setState(STATE_NONE);
-
+    private void connectionFailed() {
+        setState(STATE_NONE);
         BluetoothService.this.initialize();
-        BluetoothService.this.enableBluetooth(SERVER_SIDE);
     }
 
     // THREAD THAT WILL BE USED WHILE CONNECTING .. @{
@@ -410,19 +334,16 @@ public class BluetoothService {
                 }
                 */
                 tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
-                Log.e("LHC", "ConnectThread: try to open socket:"+tmp.toString());
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
             updateUserInterface(device.getAddress(), MESSAGE_MAC_ID_CHANGE);
             mmSocket = tmp;
-            Log.e("LHC", "connectThread socket info: "+mmSocket.toString());
             setState(STATE_CONNECTING);
         }
 
         public void run() {
-            Log.e(TAG, "Begin mConnectThread...");
             setName("ConnectThread");
 
             // Before trying connection, it always needs to stop device searching process.
@@ -431,13 +352,9 @@ public class BluetoothService {
 
             try {
                 mmSocket.connect();
-                Log.e(TAG, "Bluetooth Socket Connection succeeds!");
             } catch (IOException e) {
-                Log.e("LHC", "ConnectThread exception..");
-                Log.e(TAG, "ConnectThread: Bluetooth Socket Connection fails!::"+e.toString());
-                Log.e(TAG, "ConnectThread: Socket Info:"+mmSocket.toString());
                 e.printStackTrace();
-                connectionFailed(CLIENT_SIDE);
+                connectionFailed();
                 return;
             }
 
@@ -456,7 +373,7 @@ public class BluetoothService {
             }
 
             //
-            connected(mmSocket, mmDevice, CLIENT_SIDE);
+            connected(mmSocket, mmDevice);
         }
 
         public void cancel() {
@@ -476,9 +393,8 @@ public class BluetoothService {
         private OutputStream mmOutStream = null;
         private InputStreamReader mmInRStream = null;
         private OutputStreamWriter mmOutRStream = null;
-        private final int threadType;
 
-        public ConnectedThread(BluetoothSocket socket, int _threadType) {
+        public ConnectedThread(BluetoothSocket socket) {
             Log.e(TAG, "create ConnectedThread");
 
             mmSocket = socket;
@@ -496,23 +412,11 @@ public class BluetoothService {
             } catch (IOException e) {
                 Log.e(TAG, "temp sockets not created", e);
             }
-
-            threadType = _threadType;
-
-            if (threadType == SERVER_SIDE) {
-                setSState(STATE_CONNECTED);
-            }
-            else if (threadType == CLIENT_SIDE) {
-                setState(STATE_CONNECTED);
-            }
+            setState(STATE_CONNECTED);
         }
 
         public void run() {
             int state;
-            Log.e(TAG, "Begin mConnectedThread...");
-            //int bytes;
-            //String sensorVal; // Sensor string stream that comes from Arduino.
-            /************************/
             final char mEndDelimiter = '\n';
             final char mStartDelimiter = '\r';
             boolean isStart = false;
@@ -522,22 +426,13 @@ public class BluetoothService {
             int index = 0;
             int dataAvailable = 0;
             String recvMessage = null;
-            /************************/
 
-            if (threadType == SERVER_SIDE) {
-                state = getSState();
-            }
-            else {
-                state = BluetoothService.this.getState();
-            }
+            state = BluetoothService.this.getState();
 
             // Keep listening to the InputStream while connection
-            while (state == STATE_CONNECTED) {
+            while (state == STATE_CONNECTED && !Thread.interrupted()) {
                 try {
                     if ((dataAvailable = mmInStream.available()) > 0) {
-                        //bytes = mmInStream.read(buffer);
-                        //sensor_val = new String(buffer, "UTF-8");
-                        //Log.e(TAG, "GET MSG: " + sensor_val);
                         int c = mmInRStream.read();
                         switch ((char)c) {
                             case mStartDelimiter: //'\r' 전송 char을 buffer에 저장하기 시작
@@ -558,26 +453,16 @@ public class BluetoothService {
                                 }
                                  break;
                         }
-                        //updateUserInterface(sensor_val, MESSAGE_READ);
-
                     }
-                    Thread.sleep(50);
                 } catch (IOException e) {
-                    Log.e(TAG, "["+Long.toString(this.getId())+"]ConnectedThread: Bluetooth Socket Connection fails!"+e.toString());
-                    Log.e("LHC", "connectedThread socket info: "+mmSocket.toString());
                     e.printStackTrace();
                     try {
                         mmSocket.close();
                     } catch (IOException e2) {
-                        Log.e(TAG,
-                                "Unable to close socket when connection failures",
-                                e2);
+                        e.printStackTrace();
                     }
-                    connectionFailed(threadType);
+                    connectionFailed();
                     return;
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    connectionFailed(threadType);
                 }
             }
         }
@@ -598,7 +483,6 @@ public class BluetoothService {
         public void write(char c) {
             try {
                 mmOutRStream.write(c);
-                Log.e("LHC", "Succeed to send msg:"+c);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -608,88 +492,11 @@ public class BluetoothService {
             try {
                 mmSocket.close();
                 Log.e("LHC", "["+Long.toString(this.getId())+"]ConnectedThread: cancel()");
-                if (threadType == CLIENT_SIDE)  setState(STATE_NONE);
-                else updateUserInterface("Not activated", MESSAGE_SERVER_STATE);
+                setState(STATE_NONE);
             } catch (IOException e) {
                 Log.e(TAG, "close() of connect socket failed", e);
             }
         }
     }
     // @} THREAD THAT WILL BE USED AFTER CONNECTING ..
-
-    // SERVER SIDE THREAD .. @{
-    private class BtServerThread extends Thread {
-        private final BluetoothServerSocket mmServerSocket;
-
-        public BtServerThread () {
-            BluetoothServerSocket tmp = null;
-            try {
-                // UUID is the app's UUID string, also used by tghe client code
-                // What are the insecure and secure? [NEED TO SOLVE]
-                tmp = btAdapter.listenUsingRfcommWithServiceRecord("StickEyeServer", MY_UUID);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            mmServerSocket = tmp;
-            setSState(STATE_LISTEN);
-        }
-
-        public void run() {
-            BluetoothSocket socket = null;
-            InputStream mmInStream = null;
-            OutputStream mmOutStream = null;
-
-            Log.e("LHC", "BtServerThread: Begin mAcceptThread" + this + ", state:"+BluetoothService.this.getState());
-
-            while (mSState != STATE_CONNECTED) {
-                Log.e("LHC", "BtServerThread: Start to listen");
-                try {
-                    Log.e("LHC", "BtServerThread: Wait for a socket connection");
-                    updateUserInterface("Wait for connection...", MESSAGE_SERVER_STATE);
-                    socket = mmServerSocket.accept();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Log.e("LHC", "BtServerThread: Server connection failed");
-                    break;
-                }
-
-
-                if (socket != null) {
-                    Log.e("LHC", "BtServerThread: Socket connection succeeds");
-                    synchronized (BluetoothService.this) {
-                        switch (mSState) {
-                            case STATE_LISTEN:
-                                connected(socket, socket.getRemoteDevice(), SERVER_SIDE);
-                                updateUserInterface("Connected!", MESSAGE_SERVER_STATE);
-                                break;
-                            case STATE_NONE:
-                            case STATE_CONNECTED:
-                                try {
-                                    socket.close();
-
-                                    Log.e("LHC", "BtServerThread: socket closed");
-                                } catch (IOException e) {
-                                    Log.e("LHC",
-                                            "BtServerThread: Could not close the socket",
-                                            e);
-                                }
-                                break;
-                        }
-                    }
-                }
-            }
-        }
-
-        public void cancel() {
-            try {
-                updateUserInterface("Not activated", MESSAGE_SERVER_STATE);
-                mmServerSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.e("LHC", "close() of server failed", e);
-            }
-        }
-    }
-    // @} SERVER SIDE THREAD ..
 }
