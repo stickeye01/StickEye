@@ -561,7 +561,7 @@ public class BluetoothService {
                         //updateUserInterface(sensor_val, MESSAGE_READ);
 
                     }
-                    Thread.sleep(500);
+                    Thread.sleep(50);
                 } catch (IOException e) {
                     Log.e(TAG, "["+Long.toString(this.getId())+"]ConnectedThread: Bluetooth Socket Connection fails!"+e.toString());
                     Log.e("LHC", "connectedThread socket info: "+mmSocket.toString());

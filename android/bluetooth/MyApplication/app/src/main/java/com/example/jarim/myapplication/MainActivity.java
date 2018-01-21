@@ -2,6 +2,8 @@ package com.example.jarim.myapplication;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
@@ -91,9 +93,11 @@ public class MainActivity extends Activity implements OnClickListener {
                     txt_Result.setText((String)msg.obj);
                     break;
                 case BluetoothService.MESSAGE_STATE_CHANGE:
-                    txt_conn_stats.setText((String)msg.obj);
-                    if (((String)msg.obj).equals("Connected!"))
+                    String status = (String)msg.obj;
+                    txt_conn_stats.setText(status);
+                    if (status.equals("Connected!")) {
                         tts.ispeak("블루투스 연결이 성공하였습니다.");
+                    }
                     break;
                 case BluetoothService.MESSAGE_MAC_ID_CHANGE:
                     txt_mac_id.setText((String)msg.obj);
@@ -137,6 +141,48 @@ public class MainActivity extends Activity implements OnClickListener {
                         MY_PERMISSION_SERIAL = false;
                     }
                 }
+            }
+        }
+    };
+
+    private final BroadcastReceiver bluetoothTurnedOnOff = new BroadcastReceiver() {
+        @SuppressLint("NewApi")
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            int state;
+            BluetoothDevice bluetoothDevice;
+
+            Log.e("LHC", "bluetooth is chnaged");
+            Toast.makeText(getApplicationContext(), "Bluetooth status is changed:"+BluetoothAdapter.EXTRA_STATE, Toast.LENGTH_LONG).show();
+            switch(action) {
+                case BluetoothAdapter.ACTION_STATE_CHANGED:
+                    state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1);
+                    if (state == BluetoothAdapter.STATE_OFF) {
+                        Toast.makeText(getApplicationContext(),
+                                "Bluetooth is off", Toast.LENGTH_SHORT).show();
+                    } else if (state == BluetoothAdapter.STATE_TURNING_OFF) {
+                        Toast.makeText(getApplicationContext(),
+                                "Bluetooth is turning off", Toast.LENGTH_SHORT).show();
+                    } else if (state == BluetoothAdapter.STATE_ON) {
+                        Toast.makeText(getApplicationContext(),
+                                "Bluetooth is on", Toast.LENGTH_SHORT).show();
+                    }
+                    break;
+                case BluetoothDevice.ACTION_ACL_CONNECTED:
+                    bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    tts.ispeak("블루투스 연결이 성공하였습니다.");
+                    txt_conn_stats.setText("Connected!");
+                    break;
+                case BluetoothDevice.ACTION_ACL_DISCONNECTED:
+                    bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    tts.ispeak("블루투스 연결이 실패하였습니다.");
+                    txt_conn_stats.setText("Disconnected!");
+                    break;
+            }
+            if (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1) ==
+                    BluetoothAdapter.STATE_OFF) {
+                txt_conn_stats.setText("Unconnected!");
             }
         }
     };
@@ -216,6 +262,14 @@ public class MainActivity extends Activity implements OnClickListener {
                 btService.enableBluetooth(CLIENT_SIDE);
             }
         }
+
+        // Monitor whether Bluetooth is turned off or not.d
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+        filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
+        registerReceiver(bluetoothTurnedOnOff, filter);
     }
 
     /**
@@ -289,8 +343,10 @@ public class MainActivity extends Activity implements OnClickListener {
         mRegDialog.dismiss();
 
         MY_PERMISSION_SERIAL = false;
+        unregisterReceiver(bluetoothTurnedOnOff);
         unregisterReceiver(mUsbReceiver);
     }
+
 
     /**
      *
