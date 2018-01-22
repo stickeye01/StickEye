@@ -97,7 +97,6 @@ public class SerialConnector {
      ******************************************************/
     // send string to remote
     public void sendCommand(String cmd) {
-
         if(mPort != null && cmd != null) {
             try {
                 Log.e("LHC", "send command: "+cmd);
@@ -106,7 +105,7 @@ public class SerialConnector {
                 mPort.write(cmd.getBytes(), cmd.length());		// Send to remote device
             }
             catch(IOException e) {
-                Message msg1 = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Failed in sending command. : IO Exception \n");
+                Message msg1 = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Failed in sending command. : IO Exception:"+e.toString()+"\n");
                 mHandler.sendMessage(msg1);
             }
         }
@@ -175,7 +174,7 @@ public class SerialConnector {
             boolean is_success = false;
             while (!Thread.interrupted()) {
                 if (startTime >= Constants.TIMEOUT) break;
-                if (initialize()) {
+                if (this.initialize()) {
                     is_success = true;
                     break;
                 }
@@ -244,6 +243,7 @@ public class SerialConnector {
 //			Log.d(TAG, "Read " + numBytesRead + " bytes.");
             } catch (IOException e) {
                 // Deal with error.
+                Log.e("LHC", "initialize error");
                 msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # run: " + e.toString() + "\n");
                 mHandler.sendMessage(msg);
                 return false;
@@ -251,6 +251,11 @@ public class SerialConnector {
             }
             msg = mHandler.obtainMessage(Constants.MSG_USB_NOTIFY, 0, 0, "USB port is activated\n");
             mHandler.sendMessage(msg);
+
+
+            msg = mHandler.obtainMessage(Constants.MSG_USB_CONN_SUCCESS);
+            mHandler.sendMessage(msg);
+
             return true;
         }
 
@@ -289,8 +294,6 @@ public class SerialConnector {
             final char mEndDelimiter = '\n';
             final char mStartDelimiter = '\r';
             boolean isStart = false;
-            msg = mHandler.obtainMessage(Constants.MSG_USB_CONN_SUCCESS);
-            mHandler.sendMessage(msg);
             int startTime = 0;
             Log.e("LHC", "monitor Handler ID:"+Thread.currentThread().getId());
 
