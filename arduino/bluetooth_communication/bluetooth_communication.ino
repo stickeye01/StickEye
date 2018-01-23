@@ -3,7 +3,6 @@
 #define BUFF_SIZE 256
 int blue_Tx = 2;  //블루투스 모듈의 T(Transmitt)x를 Digital pin 9번에 연결
 int blue_Rx = 3;  //블루투스 모듈의 R(Receive)x를 Digital pin 10번에 연결
-int ledPin = 13;
 int bufferSize = 0;
 //String mac_addr = "rn00:21:13:01:51:5D\n"; // 박효정 MAC_ID
 String mac_addr = "\r20:16:05:19:90:62\n"; // 이호찬 MAC_ID
@@ -29,7 +28,6 @@ String command = "";
 void setup(){
   BTSerial.begin(9600);
   Serial.begin(9600);
-  pinMode(ledPin, OUTPUT);
   index =0;
   bufferSize = 0;
 }
@@ -79,17 +77,8 @@ void serialMode(){
     }
          
     if(command.equals("MAC_ADDR")){
-      digitalWrite(ledPin, HIGH);
-      delay(2000);
-      digitalWrite(ledPin, LOW);
-      delay(2000);
       //Serial.println(mac_addr);
       writeString(mac_addr);
-    } else {
-      digitalWrite(ledPin, HIGH);
-      delay(300);
-      digitalWrite(ledPin, LOW);
-      delay(300);
     }
   } //
 }
