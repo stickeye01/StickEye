@@ -119,28 +119,24 @@ public class MainActivity extends Activity implements OnClickListener {
             if(UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
                 if(device != null){
                     if(mSerialConn != null) {
-                        mSerialConn.finalize();
+                        //mSerialConn.finalize();
                         MY_PERMISSION_SERIAL = false;
                         txt_usb_stats.setText("A drive is NULL");
                     }
-                    Toast.makeText(getApplicationContext(), "USB is disconnected", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(),
+                            "USB is disconnected", Toast.LENGTH_LONG).show();
                 }
             } else if(UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-                if(device != null){
-                    if(mSerialConn != null) {
-                        mSerialConn.finalize();
-                        MY_PERMISSION_SERIAL = false;
-                    }
-                    Toast.makeText(getApplicationContext(), "USB is disconnected", Toast.LENGTH_LONG).show();
-                }
+                    Toast.makeText(getApplicationContext(),
+                            "USB is connected", Toast.LENGTH_LONG).show();
             } else if (Constants.ACTION_USB_PERMISSION.equals(action)) {
                 synchronized (this) {
                     device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     //allowed permission
-                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED,
+                                                    false)) {
                         if(device != null){
                             MY_PERMISSION_SERIAL = true;
-                            mSerialConn.initialize();
                         }
                     }
                     //denied permission
@@ -311,13 +307,12 @@ public class MainActivity extends Activity implements OnClickListener {
                 mRegDialog.show();
                 mRegDialogHandler.postDelayed(mDismissRunnable, Constants.TIMEOUT);
 
-                if(mSerialConn != null && !MY_PERMISSION_SERIAL){
+                if(mSerialConn != null && !MY_PERMISSION_SERIAL) {
                     txt_usb_stats.setText("Try to get device permission..");
                     mSerialConn.obtainPermission();
-                } else {
-                    txt_usb_stats.setText("Registering..");
-                    mSerialConn.initialize();
                 }
+                txt_usb_stats.setText("Registering..");
+                mSerialConn.initialize();
                 break;
         }
     }

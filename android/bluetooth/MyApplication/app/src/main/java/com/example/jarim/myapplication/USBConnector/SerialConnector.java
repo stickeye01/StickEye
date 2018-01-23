@@ -11,6 +11,7 @@ import java.util.List;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
@@ -71,23 +72,31 @@ public class SerialConnector {
     public void obtainPermission(){
         Message msg = null;
         UsbManager manager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
+
         if (manager == null)
             manager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
+
         List<USBSerialDriver> availableDrivers = USBSerialProber.getDefaultProber().findAllDrivers(manager);
         if (availableDrivers.isEmpty()) {
-            msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # A drive is NULL \n");
+            msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0,
+                    "Error # A drive is NULL \n");
             mHandler.sendMessage(msg);
             return;
         }
         mDriver = availableDrivers.get(0);
         if (mDriver == null) {
-            msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0, "Error # B drive is NULL \n");
+            msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0,
+                    "Error # B drive is NULL \n");
             mHandler.sendMessage(msg);
             return;
         }
         UsbDevice device = mDriver.getDevice();
-        PendingIntent mPermissionIntent = PendingIntent.getBroadcast(mContext, 0, new Intent(Constants.ACTION_USB_PERMISSION), 0);
+        PendingIntent mPermissionIntent = PendingIntent.getBroadcast(mContext, 0,
+                new Intent(Constants.ACTION_USB_PERMISSION), 0);
         manager.requestPermission(device, mPermissionIntent);
+        msg = mHandler.obtainMessage(Constants.MSG_SERIAL_ERROR, 0, 0,
+                "Request USB connection\n");
+        mHandler.sendMessage(msg);
     }
 
 
