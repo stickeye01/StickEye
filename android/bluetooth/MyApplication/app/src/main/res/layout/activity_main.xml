@@ -95,4 +95,42 @@
         android:layout_below="@+id/usb_stat_title"
         android:text="Not activated"
         android:textColor="@android:color/holo_red_dark" />
+
+    <Button
+        android:id="@+id/top"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignEnd="@+id/usb_stat"
+        android:layout_alignRight="@+id/usb_stat"
+        android:layout_below="@+id/usb_stat"
+        android:layout_marginTop="62dp"
+        android:text="top" />
+
+    <Button
+        android:id="@+id/left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/right"
+        android:layout_alignBottom="@+id/right"
+        android:layout_alignLeft="@+id/usb_stat"
+        android:layout_alignStart="@+id/usb_stat"
+        android:text="left" />
+
+    <Button
+        android:id="@+id/bottom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/top"
+        android:layout_toEndOf="@+id/top"
+        android:layout_toRightOf="@+id/top"
+        android:text="bottom" />
+
+    <Button
+        android:id="@+id/right"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/bottom"
+        android:layout_toEndOf="@+id/left"
+        android:layout_toRightOf="@+id/left"
+        android:text="right" />
 </RelativeLayout>

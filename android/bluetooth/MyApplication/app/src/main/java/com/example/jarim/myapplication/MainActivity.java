@@ -23,6 +23,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.jarim.myapplication.AndroidSide.MultiDimensionMenu;
 import com.example.jarim.myapplication.USBConnector.SerialConnector;
 
 import java.io.UnsupportedEncodingException;
@@ -50,6 +51,13 @@ public class MainActivity extends Activity implements OnClickListener {
     private TextView txt_conn_stats;
     private TextView txt_serv_stats;
     private TextView txt_usb_stats;
+
+    // TEST Layout
+    private Button btn_top;
+    private Button btn_bottom;
+    private Button btn_left;
+    private Button btn_right;
+    private MultiDimensionMenu mDimMenu;
 
     // Bluetooth
     private BluetoothService btService = null;
@@ -223,6 +231,17 @@ public class MainActivity extends Activity implements OnClickListener {
         btn_connect.setOnClickListener(this);
         btn_register.setOnClickListener(this);
 
+        // TEST Layout
+        btn_bottom = findViewById(R.id.bottom);
+        btn_top = findViewById(R.id.top);
+        btn_left = findViewById(R.id.left);
+        btn_right = findViewById(R.id.right);
+        btn_bottom.setOnClickListener(this);
+        btn_top.setOnClickListener(this);
+        btn_left.setOnClickListener(this);
+        btn_right.setOnClickListener(this);
+        mDimMenu = new MultiDimensionMenu(tts);
+
         if(btService == null) {
             btService = new BluetoothService(this, btHandler);
         }
@@ -314,6 +333,19 @@ public class MainActivity extends Activity implements OnClickListener {
                 txt_usb_stats.setText("Registering..");
                 mSerialConn.initialize();
                 break;
+            case R.id.top:
+                mDimMenu.top();
+                break;
+            case R.id.bottom:
+                mDimMenu.down();
+                break;
+            case R.id.left:
+                mDimMenu.left();
+                break;
+            case R.id.right:
+                mDimMenu.right();
+                break;
+
         }
     }
 
