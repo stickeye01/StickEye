@@ -7,8 +7,10 @@ import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.net.Uri;
 import android.os.CountDownTimer;
 import android.support.v4.app.ActivityCompat;
 import android.os.Bundle;
@@ -16,6 +18,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -57,6 +60,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private Button btn_bottom;
     private Button btn_left;
     private Button btn_right;
+    private Button btn_click;
     private MultiDimensionMenu mDimMenu;
 
     // Bluetooth
@@ -97,19 +101,19 @@ public class MainActivity extends Activity implements OnClickListener {
     private final Handler btHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            switch(msg.what) {
+            switch (msg.what) {
                 case BluetoothService.MESSAGE_READ:
-                    txt_Result.setText((String)msg.obj);
+                    txt_Result.setText((String) msg.obj);
                     break;
                 case BluetoothService.MESSAGE_STATE_CHANGE:
-                    String status = (String)msg.obj;
+                    String status = (String) msg.obj;
                     txt_conn_stats.setText(status);
                     break;
                 case BluetoothService.MESSAGE_MAC_ID_CHANGE:
-                    txt_mac_id.setText((String)msg.obj);
+                    txt_mac_id.setText((String) msg.obj);
                     break;
                 case BluetoothService.MESSAGE_SERVER_STATE:
-                    txt_serv_stats.setText((String)msg.obj);
+                    txt_serv_stats.setText((String) msg.obj);
                     break;
             }
         }
@@ -120,13 +124,13 @@ public class MainActivity extends Activity implements OnClickListener {
     *  ACTION_USB_DEVICE_ATTACHED : usb connected. Get device information and Try to get permission.
     *  ACTION_USB_PERMISSION : Try to get permission. if user allowed permission, open connection with arduino.(initialize())
      */
-    BroadcastReceiver mUsbReceiver =new BroadcastReceiver(){
-        public void onReceive(Context context,Intent intent){
+    BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            UsbDevice device =(UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-            if(UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-                if(device != null){
-                    if(mSerialConn != null) {
+            UsbDevice device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+                if (device != null) {
+                    if (mSerialConn != null) {
                         //mSerialConn.finalize();
                         MY_PERMISSION_SERIAL = false;
                         txt_usb_stats.setText("A drive is NULL");
@@ -134,16 +138,16 @@ public class MainActivity extends Activity implements OnClickListener {
                     Toast.makeText(getApplicationContext(),
                             "USB is disconnected", Toast.LENGTH_LONG).show();
                 }
-            } else if(UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-                    Toast.makeText(getApplicationContext(),
-                            "USB is connected", Toast.LENGTH_LONG).show();
+            } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+                Toast.makeText(getApplicationContext(),
+                        "USB is connected", Toast.LENGTH_LONG).show();
             } else if (Constants.ACTION_USB_PERMISSION.equals(action)) {
                 synchronized (this) {
-                    device = (UsbDevice)intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                    device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     //allowed permission
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED,
-                                                    false)) {
-                        if(device != null){
+                            false)) {
+                        if (device != null) {
                             MY_PERMISSION_SERIAL = true;
                         }
                     }
@@ -164,7 +168,7 @@ public class MainActivity extends Activity implements OnClickListener {
             int state;
             BluetoothDevice bluetoothDevice;
 
-            switch(action) {
+            switch (action) {
                 case BluetoothAdapter.ACTION_STATE_CHANGED:
                     state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1);
                     if (state == BluetoothAdapter.STATE_OFF) {
@@ -200,7 +204,7 @@ public class MainActivity extends Activity implements OnClickListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.e("LHC", "Handler thread ID:"+Thread.currentThread().getId());
+        Log.e("LHC", "Handler thread ID:" + Thread.currentThread().getId());
         Log.e(TAG, "onCreate");
         setContentView(R.layout.activity_main);
         // TTS
@@ -220,6 +224,7 @@ public class MainActivity extends Activity implements OnClickListener {
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.BLUETOOTH_ADMIN},
                 MY_PERMISSIONS_REQUEST_BLUETOOTH_ADMIN);
+
         // Layout
         btn_connect = (Button) findViewById(R.id.btn_connect);
         btn_register = (Button) findViewById(R.id.btn_register);
@@ -236,13 +241,15 @@ public class MainActivity extends Activity implements OnClickListener {
         btn_top = findViewById(R.id.top);
         btn_left = findViewById(R.id.left);
         btn_right = findViewById(R.id.right);
+        btn_click = findViewById(R.id.click);
         btn_bottom.setOnClickListener(this);
         btn_top.setOnClickListener(this);
         btn_left.setOnClickListener(this);
         btn_right.setOnClickListener(this);
-        mDimMenu = new MultiDimensionMenu(tts);
+        btn_click.setOnClickListener(this);
+        mDimMenu = new MultiDimensionMenu(tts, this);
 
-        if(btService == null) {
+        if (btService == null) {
             btService = new BluetoothService(this, btHandler);
         }
 
@@ -271,7 +278,7 @@ public class MainActivity extends Activity implements OnClickListener {
         updateMACID();
 
         // Attempts to connect Bluetooth.
-        if(btService.getDeviceState()) {
+        if (btService.getDeviceState()) {
             if (btService.getState() != BluetoothService.STATE_CONNECTED) {
                 btService.enableBluetooth();
             }
@@ -293,8 +300,8 @@ public class MainActivity extends Activity implements OnClickListener {
         if (mDBOpenHandler != null) {
             mDBOpenHandler.open();
             Constants.macAddr = mDBOpenHandler.select().
-                                    replace("\n", "").
-                                    replace("\n", "");
+                    replace("\n", "").
+                    replace("\n", "");
             txt_usb_stats.setText(Constants.macAddr);
             txt_mac_id.setText(Constants.macAddr);
             mDBOpenHandler.close();
@@ -309,7 +316,7 @@ public class MainActivity extends Activity implements OnClickListener {
             case R.id.btn_connect:
                 //TTS TEST
                 tts.sspeak("블루투스 접속 요청되었습니다.");
-                if(btService.getDeviceState()) {
+                if (btService.getDeviceState()) {
                     if (btService.getState() != BluetoothService.STATE_CONNECTED) {
                         btService.enableBluetooth();
                     }
@@ -320,13 +327,13 @@ public class MainActivity extends Activity implements OnClickListener {
             case R.id.btn_register:
                 tts.ispeak("장치 등록이 요청되었습니다. " +
                         "USB를 통해 지팡이를 연결해주세요.");
-                if(mSerialConn != null)  mSerialConn.finalize();
+                if (mSerialConn != null) mSerialConn.finalize();
                 Toast.makeText(getApplicationContext(), "USB is registering", Toast.LENGTH_LONG).show();
                 mRegDialog = new RegisterDialog(this);
                 mRegDialog.show();
                 mRegDialogHandler.postDelayed(mDismissRunnable, Constants.TIMEOUT);
 
-                if(mSerialConn != null && !MY_PERMISSION_SERIAL) {
+                if (mSerialConn != null && !MY_PERMISSION_SERIAL) {
                     txt_usb_stats.setText("Try to get device permission..");
                     mSerialConn.obtainPermission();
                 }
@@ -345,7 +352,9 @@ public class MainActivity extends Activity implements OnClickListener {
             case R.id.right:
                 mDimMenu.right();
                 break;
-
+            case R.id.click:
+                mDimMenu.click();
+                break;
         }
     }
 
@@ -353,7 +362,7 @@ public class MainActivity extends Activity implements OnClickListener {
         Log.d(TAG, "MainActivity: onActivityResult(" + resultCode + ")");
         switch (requestCode) {
             case REQUEST_CONNECT_DEVICE:
-                if(resultCode == Activity.RESULT_OK){
+                if (resultCode == Activity.RESULT_OK) {
                     btService.getDeviceInfo(data);
                 }
                 break;
@@ -381,19 +390,19 @@ public class MainActivity extends Activity implements OnClickListener {
     public class usbHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
-            switch(msg.what) {
+            switch (msg.what) {
                 case Constants.MSG_DEVICD_INFO:  // Serial connected device information.
-                    txt_usb_stats.setText((String)msg.obj);
+                    txt_usb_stats.setText((String) msg.obj);
                     break;
                 case Constants.MSG_DEVICE_COUNT: // The number of connected device.
                     txt_usb_stats.setText(Integer.toString(msg.arg1) + " device(s) found \n");
                     break;
                 case Constants.MSG_READ_DATA_COUNT: // The number of gotten bytes.
                     txt_usb_stats.append("Read data from a serial port (bytes): " +
-                                                Integer.toString(msg.arg1)+"\n");
+                            Integer.toString(msg.arg1) + "\n");
                     break;
                 case Constants.MSG_READ_DATA: // Get data and register a device.
-                    if(msg.obj != null) {
+                    if (msg.obj != null) {
                         String data = (String) msg.obj;
                         // Complete input format:
                         //   "\r20:03:04:....:02\n"
@@ -401,13 +410,13 @@ public class MainActivity extends Activity implements OnClickListener {
                             mRegDialogHandler.removeCallbacks(mDismissRunnable);
                             txt_usb_stats.setText(data);
                             String device_address = data.replaceAll("\n", "").
-                                                        replace("\r", "");
+                                    replace("\r", "");
                             mDBOpenHandler.open();
                             mDBOpenHandler.deleteAll();
                             mDBOpenHandler.insert("target", device_address);
-                            Toast.makeText(getApplicationContext(), device_address+":"+
-                                   Integer.toString(device_address.length()),
-                                   Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), device_address + ":" +
+                                            Integer.toString(device_address.length()),
+                                    Toast.LENGTH_SHORT).show();
                             txt_mac_id.setText(data);
                             if (mRegDialog != null && mRegDialog.isShowing()) {
                                 mRegDialog.dismiss();
@@ -422,7 +431,7 @@ public class MainActivity extends Activity implements OnClickListener {
                     }
                     break;
                 case Constants.MSG_SERIAL_ERROR: // Error statement.
-                    txt_usb_stats.setText((String)msg.obj);
+                    txt_usb_stats.setText((String) msg.obj);
                     break;
                 case Constants.MSG_DIALOG_HIDE: // Hide dialogue.
                     txt_usb_stats.setText("Failed to connect USB Serial Port: Timeout");
@@ -445,7 +454,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 case Constants.MSG_CONN_FAIL:
                     break;
                 case Constants.MSG_USB_NOTIFY:  // Show normal messages.
-                    txt_usb_stats.append((String)msg.obj);
+                    txt_usb_stats.append((String) msg.obj);
                     break;
             }
         }

@@ -133,4 +133,34 @@
         android:layout_toEndOf="@+id/left"
         android:layout_toRightOf="@+id/left"
         android:text="right" />
+
+    <Button
+        android:id="@+id/click"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/left"
+        android:layout_alignStart="@+id/left"
+        android:layout_below="@+id/left"
+        android:text="click" />
+
+    <EditText
+        android:id="@+id/test_input"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/click"
+        android:layout_alignStart="@+id/click"
+        android:layout_below="@+id/click"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="01068788192" />
+
+    <Button
+        android:id="@+id/click2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/test_input"
+        android:layout_alignBottom="@+id/test_input"
+        android:layout_toEndOf="@+id/test_input"
+        android:layout_toRightOf="@+id/test_input"
+        android:text="CLICK" />
 </RelativeLayout>

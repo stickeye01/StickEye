@@ -1,5 +1,10 @@
 package com.example.jarim.myapplication.AndroidSide;
 
+import android.app.Activity;
+import android.content.Context;
+
+import com.example.jarim.myapplication.TtsService;
+
 import java.util.ArrayList;
 
 /**
@@ -10,14 +15,20 @@ public class AppBean {
     private String name;
     private String intentName;
     private ArrayList<AppBean> subAppList;
+    public TtsService tts;
+    public Context mContext;
+    public Activity mActivity;
 
     public AppBean() {
 
     }
 
-    public AppBean(String _name, String _intentName) {
+    public AppBean(String _name, String _intentName, TtsService _tts, Context _ctx) {
         name = _name;
         intentName = _intentName;
+        tts = _tts;
+        mContext = _ctx;
+        mActivity = (Activity) mContext;
     }
 
     /**
@@ -79,5 +90,5 @@ public class AppBean {
      * Start outer application (need to override).
      * @return
      */
-    public boolean start() { return true; }
+    public boolean start(Object o) { return true; }
 }
