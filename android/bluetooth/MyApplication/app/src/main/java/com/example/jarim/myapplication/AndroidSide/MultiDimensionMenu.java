@@ -29,11 +29,11 @@ public class MultiDimensionMenu {
         vertical_index = 0;
         horizontal_index = 0;
         appList = new ArrayList<AppBean>();
-        PhoneCallBean callApp = new PhoneCallBean("전화번호부",
+        PhoneCallBean callApp = new PhoneCallBean("전화관련",
                 "", tts, mContext);
         PhoneCallBean callDialApp = new PhoneCallBean("전화걸기",
                 "", tts, mContext);
-        PhoneCallBean callRegApp = new PhoneCallBean("전화번호등록",
+        PhoneRegisterBean callRegApp = new PhoneRegisterBean("전화번호등록",
                 "", tts, mContext);
         callApp.addSubItem(callDialApp);
         callApp.addSubItem(callRegApp);
