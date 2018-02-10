@@ -1,6 +1,9 @@
  #include <SoftwareSerial.h>
 
 #define BUFF_SIZE 256
+int joystick_x = A0;
+int joystick_y = A1;
+int joystick_press = 1;
 int blue_Tx = 2;  //블루투스 모듈의 T(Transmitt)x를 Digital pin 9번에 연결
 int blue_Rx = 3;  //블루투스 모듈의 R(Receive)x를 Digital pin 10번에 연결
 int bufferSize = 0;
@@ -26,6 +29,7 @@ String command = "";
 *초기 접속시에는 비밀번호 입력
 */
 void setup(){
+  pinMode(joystick_press, INPUT_PULLUP);
   BTSerial.begin(9600);
   Serial.begin(9600);
   index =0;
@@ -34,12 +38,17 @@ void setup(){
 
 void loop(){
     serialMode();
+    Serial.print("Test");
+    sendJoyStickInput();
     //bluetoothMode();
     //if(BTSerial.available()){
     //  Serial.write(BTSerial.read());
     //  delay(500);
 }
 
+/**
+ *  Bluetooth Networking 처리.
+ */
 void bluetoothMode(){
   if(Serial.available()){
     char data = (char)Serial.read();
@@ -60,6 +69,9 @@ void bluetoothMode(){
   }
 }
 
+/**
+ *  USB Networking 처리.
+ */
 void serialMode(){
   /*
    *  "MAC_ADDR" 이라는 명령을 안드로이드로부터 받으면,
@@ -93,3 +105,32 @@ void writeString(String stringData) {
     delay(1);
   }
 }
+
+/**
+ * JoyStick 입력에 따라 Bluetooth 전송.
+ */
+void sendJoyStickInput() {
+    // put your main code here, to run repeatedly:
+  int x = analogRead(joystick_x);
+  int y = analogRead(joystick_y);
+  int sel = digitalRead(joystick_press);
+
+  if (y >= 400 && y <= 600) {
+    if (x >= 600 && x <= 1023) {
+      Serial.print("우");
+      delay(100);
+    } else if(x >= 0 && x <= 400) {
+      Serial.print("좌");
+      delay(100);
+    }
+  } else if (x >= 400 && x <= 600) {
+    if (y >= 600 && y <= 1023) {
+      Serial.print("하");
+      delay(100);
+    } else if(y >= 0 && y <=400) {
+      Serial.print("상");
+      delay(100);
+    }
+  }
+}
+
