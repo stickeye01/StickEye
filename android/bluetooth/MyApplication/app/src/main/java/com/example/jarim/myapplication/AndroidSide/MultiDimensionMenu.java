@@ -48,6 +48,9 @@ public class MultiDimensionMenu {
         appList.add(mp3App);
     }
 
+    /**
+     *  move left.
+     */
     public void left() {
         Log.e("LHC", "LEFT");
         horizontal_index --;
@@ -56,6 +59,9 @@ public class MultiDimensionMenu {
         tts.ispeak(appList.get(horizontal_index).getName());
     }
 
+    /**
+     *  move right.
+     */
     public void right() {
         Log.e("LHC", "RIGHT");
         horizontal_index ++;
@@ -64,6 +70,9 @@ public class MultiDimensionMenu {
         tts.ispeak(appList.get(horizontal_index).getName());
     }
 
+    /**
+     *  move top.
+     */
     public void top() {
         Log.e("LHC", "TOP");
         curItem = appList.get(horizontal_index);
@@ -73,12 +82,17 @@ public class MultiDimensionMenu {
         }
         vertical_index++;
         ArrayList<AppBean> subItems = curItem.getSubItem();
-        if (vertical_index > subItems.size()-1)
+        if (subItems != null && vertical_index > subItems.size()-1)
             vertical_index = 0;
-        curItem = subItems.get(vertical_index);
+        if (vertical_index >= 0 && subItems != null &&
+                            vertical_index < subItems.size())
+            curItem = subItems.get(vertical_index);
         tts.ispeak(curItem.getName());
     }
 
+    /**
+     *  move down.
+     */
     public void down() {
         Log.e("LHC", "DOWN");
         curItem = appList.get(horizontal_index);
@@ -88,16 +102,24 @@ public class MultiDimensionMenu {
         }
         vertical_index --;
         ArrayList<AppBean> subItems = curItem.getSubItem();
-        if (vertical_index < 0)
+        if (vertical_index < 0 && subItems != null)
             vertical_index = subItems.size()-1;
-        curItem = subItems.get(vertical_index);
+        if (vertical_index >= 0 && subItems != null &&
+                            vertical_index < subItems.size())
+            curItem = subItems.get(vertical_index);
         tts.ispeak(curItem.getName());
     }
 
+    /**
+     *  clicked.
+     */
     public void click() {
         AppBean selectedApp = appList.get(horizontal_index);
         if (selectedApp == null) return;
-        selectedApp = selectedApp.getSubItem().get(vertical_index);
-        selectedApp.start(null);
+        ArrayList subItems = selectedApp.getSubItem();
+        if (vertical_index >= 0 && subItems != null && vertical_index < subItems.size()) {
+            selectedApp = selectedApp.getSubItem().get(vertical_index);
+            selectedApp.start(null);
+        }
     }
 }

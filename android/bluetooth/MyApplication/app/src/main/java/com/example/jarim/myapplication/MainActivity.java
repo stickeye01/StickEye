@@ -103,11 +103,14 @@ public class MainActivity extends Activity implements OnClickListener {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case BluetoothService.MESSAGE_READ:
-                    txt_Result.setText((String) msg.obj);
+                    String command = (String) msg.obj;
+                    txt_Result.setText(command);
+                    processData(command);
                     break;
                 case BluetoothService.MESSAGE_STATE_CHANGE:
                     String status = (String) msg.obj;
                     txt_conn_stats.setText(status);
+                    Log.e("LHC", "State is changed");
                     break;
                 case BluetoothService.MESSAGE_MAC_ID_CHANGE:
                     txt_mac_id.setText((String) msg.obj);
@@ -340,21 +343,6 @@ public class MainActivity extends Activity implements OnClickListener {
                 txt_usb_stats.setText("Registering..");
                 mSerialConn.initialize();
                 break;
-            case R.id.top:
-                mDimMenu.top();
-                break;
-            case R.id.bottom:
-                mDimMenu.down();
-                break;
-            case R.id.left:
-                mDimMenu.left();
-                break;
-            case R.id.right:
-                mDimMenu.right();
-                break;
-            case R.id.click:
-                mDimMenu.click();
-                break;
         }
     }
 
@@ -385,7 +373,7 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     /**
-     *
+     * USB connection processing..
      */
     public class usbHandler extends Handler {
         @Override
@@ -458,6 +446,25 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
             }
         }
+    }
+
+    /**
+     * process command from Bluetooth.
+     */
+    void processData(String command) {
+        // @{ Joystick --
+        if (command.equals("dt")) { // top
+            mDimMenu.top();
+        } else if (command.equals("db")) { // down
+            mDimMenu.down();
+        } else if (command.equals("dl")) { // left
+            mDimMenu.left();
+        } else if (command.equals("dr")) { // right
+            mDimMenu.right();
+        } else if (command.equals("ds")) { // selected
+            mDimMenu.click();
+        }
+        //  @} Joystick --
     }
 }
 
