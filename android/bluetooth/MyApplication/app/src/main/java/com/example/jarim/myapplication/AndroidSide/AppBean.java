@@ -91,4 +91,9 @@ public class AppBean {
      * @return
      */
     public boolean start(Object o) { return true; }
+
+    /**
+     * Select a menu
+     */
+    public void clicked(Object o) { }
 }

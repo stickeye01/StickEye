@@ -16,6 +16,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.example.jarim.myapplication.Constants;
 import com.example.jarim.myapplication.R;
 import com.example.jarim.myapplication.TtsService;
 
@@ -23,26 +24,21 @@ import com.example.jarim.myapplication.TtsService;
  * Created by hochan on 2018-02-07.
  */
 
-public class PhoneCallBean extends AppBean implements View.OnClickListener {
-    private final int PHONE_NUMBER_STAGE = 0;
-    private final int CALLING_STAGE = 1;
+public class PhoneCallBean extends AppBean{
     private EditText input_etext;
-    private Button click_button;
-    private int no_degree = PHONE_NUMBER_STAGE;
+    private int no_degree = Constants.PHONE_NUMBER_STAGE;
     private String phoneNum;
     private Intent intent;
 
     public PhoneCallBean(String _name, String _intentName, TtsService _tts, Context _ctx) {
         super(_name, _intentName, _tts, _ctx);
         input_etext = (EditText) mActivity.findViewById(R.id.test_input);
-        click_button = (Button) mActivity.findViewById(R.id.click2);
-        click_button.setOnClickListener(this);
     }
 
 
     @Override
     public boolean start(Object o) {
-        tts.sspeak("전화번호를 입력하세요.");
+        tts.sspeak("전화 걸기입니다. 전화번호를 입력하세요.");
         input_etext.setText("");
         input_etext.requestFocus();
         return true;
@@ -50,19 +46,19 @@ public class PhoneCallBean extends AppBean implements View.OnClickListener {
 
 
     @Override
-    public void onClick(View v) {
-        //
+    public void clicked(Object _v) {
+        View v = (View) _v;
         // We go through two steps while calling,
         // First, get a phone number,
         // Second, call this phone number,
         if (v.getId() == R.id.click2) {
-            if (no_degree == PHONE_NUMBER_STAGE) {
+            if (no_degree == Constants.PHONE_NUMBER_STAGE) {
                 phoneNum = input_etext.getText().toString();
                 input_etext.setText("");
                 tts.sspeak("전화번호가 입력되었습니다. 전화번호는 " + phoneNum + " 입니다.");
                 tts.sspeak("전화를 걸고 싶으면 Click 버튼을 누르세요");
-                no_degree = CALLING_STAGE;
-            } else if (no_degree == CALLING_STAGE) {
+                no_degree = Constants.CALLING_STAGE;
+            } else if (no_degree == Constants.CALLING_STAGE) {
                 tts.sspeak("전화를 겁니다.");
                 intent = new Intent(Intent.ACTION_CALL,
                         Uri.parse("tel:" + phoneNum));
@@ -75,7 +71,7 @@ public class PhoneCallBean extends AppBean implements View.OnClickListener {
                 } else {
                     mContext.startActivity(intent);
                 }
-                no_degree = PHONE_NUMBER_STAGE;
+                no_degree = Constants.PHONE_NUMBER_STAGE;
             }
         }
     }

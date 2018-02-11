@@ -19,4 +19,9 @@ public class Constants {
     public static String macAddr = "";
     public static final int TIMEOUT = 30000;
 
+    public static final int NAME_REGISTER_STAGE = 0;
+    public static final int PHONE_NUM_REG_STAGE = 1;
+    public static final int REGISTER_FINAL_STAGE = 2;
+    public static final int PHONE_NUMBER_STAGE = 3;
+    public static final int CALLING_STAGE = 4;
 }
