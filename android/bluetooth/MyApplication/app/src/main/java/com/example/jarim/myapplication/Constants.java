@@ -22,6 +22,21 @@ public class Constants {
     public static final int NAME_REGISTER_STAGE = 0;
     public static final int PHONE_NUM_REG_STAGE = 1;
     public static final int REGISTER_FINAL_STAGE = 2;
-    public static final int PHONE_NUMBER_STAGE = 3;
+    public static final int PHONE_NUM_WRITE_STAGE = 3;
     public static final int CALLING_STAGE = 4;
+    public static final int MESSAGE_WRITE_STAGE = 5;
+    public static final int SEND_MESSAGE_STAGE = 6;
+
+    public static final char HANGUL_BEGIN_UNICODE = 44032; // 가
+    public static final char HANGUL_LAST_UNICODE = 55203; // 힣
+    public static final char HANGUL_BASE_UNIT = 588; // 각 자음마다 갖는 글자수.
+    public static final char[] HANGUL_CONSONANT = { 'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ',
+                                                        'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ',
+                                                        'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ',
+                                                        'ㅎ' };
+    public static final char[] INITIAL_SOUND = {'ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ',
+                                                'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'};
+
+    public static final int MAIN_MENU_MODE = 0;
+    public static final int SUB_MENU_MODE = 1;
 }

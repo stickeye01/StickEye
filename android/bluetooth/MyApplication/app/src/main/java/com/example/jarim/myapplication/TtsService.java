@@ -31,10 +31,6 @@ public class TtsService {
             if (status == TextToSpeech.SUCCESS) {
                 int result = mTts.setLanguage(Locale.KOREAN);
                 isLoaded = true;
-                Log.e("error", "language");
-                Log.e("error", "isloaded111: " + Boolean.toString(isLoaded));
-
-
                 //error is detected
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                     Log.e("error", "This Language is not supported");

@@ -56,11 +56,6 @@ public class MainActivity extends Activity implements OnClickListener {
     private TextView txt_usb_stats;
 
     // TEST Layout
-    private Button btn_top;
-    private Button btn_bottom;
-    private Button btn_left;
-    private Button btn_right;
-    private Button btn_click;
     private MultiDimensionMenu mDimMenu;
 
     // Bluetooth
@@ -240,16 +235,6 @@ public class MainActivity extends Activity implements OnClickListener {
         btn_register.setOnClickListener(this);
 
         // TEST Layout
-        btn_bottom = findViewById(R.id.bottom);
-        btn_top = findViewById(R.id.top);
-        btn_left = findViewById(R.id.left);
-        btn_right = findViewById(R.id.right);
-        btn_click = findViewById(R.id.click);
-        btn_bottom.setOnClickListener(this);
-        btn_top.setOnClickListener(this);
-        btn_left.setOnClickListener(this);
-        btn_right.setOnClickListener(this);
-        btn_click.setOnClickListener(this);
         mDimMenu = new MultiDimensionMenu(tts, this);
 
         if (btService == null) {

@@ -26,7 +26,7 @@ import com.example.jarim.myapplication.TtsService;
 
 public class PhoneCallBean extends AppBean{
     private EditText input_etext;
-    private int no_degree = Constants.PHONE_NUMBER_STAGE;
+    private int no_degree = Constants.PHONE_NUM_WRITE_STAGE;
     private String phoneNum;
     private Intent intent;
 
@@ -52,7 +52,7 @@ public class PhoneCallBean extends AppBean{
         // First, get a phone number,
         // Second, call this phone number,
         if (v.getId() == R.id.click2) {
-            if (no_degree == Constants.PHONE_NUMBER_STAGE) {
+            if (no_degree == Constants.PHONE_NUM_WRITE_STAGE) {
                 phoneNum = input_etext.getText().toString();
                 input_etext.setText("");
                 tts.sspeak("전화번호가 입력되었습니다. 전화번호는 " + phoneNum + " 입니다.");
@@ -71,7 +71,7 @@ public class PhoneCallBean extends AppBean{
                 } else {
                     mContext.startActivity(intent);
                 }
-                no_degree = Constants.PHONE_NUMBER_STAGE;
+                no_degree = Constants.PHONE_NUM_WRITE_STAGE;
             }
         }
     }

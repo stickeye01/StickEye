@@ -12,8 +12,10 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.telephony.SmsManager;
 import android.util.Log;
+import android.view.View;
 import android.widget.EditText;
 
+import com.example.jarim.myapplication.Constants;
 import com.example.jarim.myapplication.R;
 import com.example.jarim.myapplication.TtsService;
 
@@ -22,7 +24,10 @@ import com.example.jarim.myapplication.TtsService;
  */
 
 public class MessageSendBean extends AppBean {
-    EditText input_etext;
+    private EditText input_etext;
+    private int no_degree = Constants.PHONE_NUM_WRITE_STAGE;
+    private String phone_num;
+    private String msg;
 
     public MessageSendBean(String _name, String _intentName, TtsService _tts, Context _ctx) {
         super(_name, _intentName, _tts, _ctx);
@@ -40,9 +45,25 @@ public class MessageSendBean extends AppBean {
     }
 
     @Override
-    public void clicked(Object o) {
-        tts.sspeak("문자 메시지 전송합니다.");
-        sendSMS("01068788192", "Test");
+    public void clicked(Object _v) {
+        View v = (View) _v;
+        if (v.getId() == R.id.click2) {
+            if (no_degree == Constants.PHONE_NUM_WRITE_STAGE) {
+                phone_num = input_etext.getText().toString();
+                tts.ispeak("문자 메시지를 입력하세요.");
+                input_etext.setText("");
+                input_etext.requestFocus();
+                no_degree = Constants.MESSAGE_WRITE_STAGE;
+            } else if (no_degree == Constants.MESSAGE_WRITE_STAGE) {
+                msg = input_etext.getText().toString();
+                tts.ispeak("전송하시려면 클릭버튼을 다시 누르세요.");
+                no_degree = Constants.SEND_MESSAGE_STAGE;
+            } else if (no_degree == Constants.SEND_MESSAGE_STAGE) {
+                sendSMS(phone_num, msg);
+                tts.ispeak("메시지가 전송되었습니다.");
+                no_degree = Constants.PHONE_NUM_WRITE_STAGE;
+            }
+        }
     }
 
     private void checkPermission() {

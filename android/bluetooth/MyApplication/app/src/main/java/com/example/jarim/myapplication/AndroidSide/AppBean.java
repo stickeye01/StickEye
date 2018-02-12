@@ -96,4 +96,13 @@ public class AppBean {
      * Select a menu
      */
     public void clicked(Object o) { }
+
+    /**
+     * Direction of menu.
+     */
+    public void top() {}
+    public void down() {}
+    public void left() {}
+    public void right() {}
+    public void click() {}
 }
