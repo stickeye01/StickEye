@@ -444,8 +444,11 @@ public class BluetoothService {
                                 char[] recvChar = new char[index];
                                 System.arraycopy(writeBuffer, 0, recvChar, 0, recvChar.length);
                                 recvMessage = new String(recvChar);
-                                Log.e(TAG, "message : " + recvMessage);
                                 isStart = false;
+                                // Give the new state to the Handler so the UI Activity can be updated.
+                                Message m = mHandler.obtainMessage(BluetoothService.MESSAGE_READ);
+                                m.obj = (Object) recvMessage;
+                                mHandler.sendMessage(m);
                                 break;
                             default: //mStartDelimiter가 전송 되면 buffer에 전송된 character 저장
                                 if (isStart) {

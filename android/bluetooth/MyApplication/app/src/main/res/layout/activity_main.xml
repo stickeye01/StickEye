@@ -95,4 +95,25 @@
         android:layout_below="@+id/usb_stat_title"
         android:text="Not activated"
         android:textColor="@android:color/holo_red_dark" />
+
+
+    <EditText
+        android:id="@+id/test_input"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/click2"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="50dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="01068788192" />
+
+    <Button
+        android:id="@+id/click2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/usb_stat"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="114dp"
+        android:text="CLICK" />
 </RelativeLayout>
