@@ -1,22 +1,21 @@
 #include <Servo.h>
 #include <SoftwareSerial.h>
-#include "myMPR121.h"
 
 #define BUFF_SIZE 256
 #define NUM_ULTRA 3
 
-#define MPR121_R 0xB5  // ADD pin is grounded
-#define MPR121_W 0xB4 // So address is 0x5A
-
 #define RIGHT 60
 #define LEFT 120
 #define CENTER 90
-
+#define LIMIT 58
 /*
  * Button 
  * const int buttonPin = 2;
  */
 const int buttonPin = 2;
+uint16_t lasttouched = 0;
+uint16_t currtouched = 0;
+
 /*
  * bluetooth 
  *  블루투스 모듈의 T(Transmitt)x를 Digital pin 4번에 연결
@@ -57,7 +56,6 @@ int distIndex[3] = {0};
 float avg[NUM_ULTRA] = {0};
 
 
-
 /*====================================
  * Servo motor
  * const int motorPin = 9;
@@ -66,14 +64,13 @@ const int motorPin = 7;
 Servo servo; 
 int angle = 0; // servo position in degrees to 0(0.5ms purse) from 180(2.5ms purse)
 
-
-
 /*
  * timer setting
  */
 unsigned long preTime = 0;
 unsigned long  currentTime = 0;
 unsigned int duration = 3000;
+
 
 void setup() {
   Serial.begin(9600);
@@ -89,18 +86,9 @@ void setup() {
    -----------------------------------------*/
   //pinMode(irqpin, INPUT);
   //digitalWrite(irqpin, HIGH);
-  pinMode(buttonPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(buttonPin), clickButton, CHANGE);
+  //pinMode(buttonPin, INPUT_PULLUP);
+  //attachInterrupt(digitalPinToInterrupt(buttonPin), myKeyPad, FALLING);
 
-  /*----------------------------------------
-   * touch pad
-   -----------------------------------------*/
-  DDRC |= 0b00010011;
-  PORTC = 0b00110000;  // Pull-ups on I2C Bus
-  i2cInit();
-  delay(100);
-  mpr121QuickConfig();
-  
   /*----------------------------------------
    * ultra pad
    -----------------------------------------*/
@@ -134,13 +122,14 @@ void myTimer(){
       //readBluetoothData();
   }
 }
+
 void clickButton(){
+  //Part for testing interrupt pin.
   Serial.println("click");
   changeServoMotorAngle('c');
 }
 
 void turnHandle(){
-
     bool isBlocked[NUM_ULTRA] ={false};
     for(int i = 0 ; i<NUM_ULTRA ; i++ ){
       int avg = 0;
@@ -152,7 +141,7 @@ void turnHandle(){
             numberOfZero++;
        }
        avg /= (5-numberOfZero);
-      if(avg <10){
+      if(avg <LIMIT){
         isBlocked[i] = true;
       }
     }
