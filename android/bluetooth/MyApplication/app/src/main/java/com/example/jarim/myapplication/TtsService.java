@@ -30,6 +30,7 @@ public class TtsService {
             //setting the language
             if (status == TextToSpeech.SUCCESS) {
                 int result = mTts.setLanguage(Locale.KOREAN);
+                int rate = mTts.setSpeechRate((float) 0.8);
                 isLoaded = true;
                 //error is detected
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
