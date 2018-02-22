@@ -78,9 +78,12 @@ public class MessageBookBean extends AppBean {
     @Override
     public void left() {
         horizontal_index --;
-        if (horizontal_index < 0) horizontal_index = MSG_SIZE - 1;
+        if (horizontal_index < 0) horizontal_index = MSG_SIZE;
         readSMSMessage();
-        tts.ispeak(Integer.toString(horizontal_index)+"번째 메시지");
+        if (horizontal_index == MSG_SIZE)
+            tts.ispeak("메인 메뉴로 돌아가기");
+        else
+            tts.ispeak(Integer.toString(horizontal_index)+"번째 메시지");
         readCurMessage();
     }
 

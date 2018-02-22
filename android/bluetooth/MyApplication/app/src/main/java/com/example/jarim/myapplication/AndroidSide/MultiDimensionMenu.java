@@ -61,7 +61,7 @@ public class MultiDimensionMenu implements View.OnClickListener{
         msgApp.addSubItem(msgReadApp);
         msgApp.addSubItem(msgWriteApp);
         appList.add(msgApp);
-        AppBean mp3App = new AppBean("MP3", "", tts, mContext);
+        MP3Bean mp3App = new MP3Bean("MP3", "", tts, mContext);
         appList.add(mp3App);
     }
 
@@ -153,7 +153,11 @@ public class MultiDimensionMenu implements View.OnClickListener{
             if (selectedApp == null) return;
             ArrayList subItems = selectedApp.getSubItem();
             if (vertical_index >= 0 && subItems != null && vertical_index < subItems.size()) {
+                // if there are submenus.
                 selectedApp = selectedApp.getSubItem().get(vertical_index);
+                selectedApp.start(null);
+            } else if (vertical_index >= 0) {
+                // if there is no subitem, but it can start itself.
                 selectedApp.start(null);
             }
         } else if (selectedApp != null){
