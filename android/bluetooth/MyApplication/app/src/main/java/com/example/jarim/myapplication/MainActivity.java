@@ -64,7 +64,6 @@ public class MainActivity extends Activity implements OnClickListener {
     //tts
     TtsService tts = null;
 
-
     // Database
     private DBHandler mDBOpenHandler;
 
@@ -86,6 +85,9 @@ public class MainActivity extends Activity implements OnClickListener {
 
     // Activity context
     private Context aContext;
+
+    // Braille keyboard
+    private char brailleInput = 0;
 
     /*
      * Check whether Bluetooth network is working or not.
@@ -450,6 +452,42 @@ public class MainActivity extends Activity implements OnClickListener {
             mDimMenu.click();
         }
         //  @} Joystick --
+        //  @{ Braille keyboard
+        else if (command.equals("b0")) {
+            Log.e("LHC", "Braille key value: 0");
+            brailleInput |= 0b00000001;
+        } else if (command.equals("b1")) {
+            Log.e("LHC", "Braille key value: 1");
+            brailleInput |= 0b00000010;
+        } else if (command.equals("b2")) {
+            Log.e("LHC", "Braille key value: 2");
+            brailleInput |= 0b00000100;
+        } else if (command.equals("b3")) {
+            Log.e("LHC", "Braille key value: 3");
+            brailleInput |= 0b00001000;
+        } else if (command.equals("b4")) {
+            Log.e("LHC", "Braille key value: 4");
+            brailleInput |= 0b00010000;
+        } else if (command.equals("b5")) {
+            Log.e("LHC", "Braille key value: 5");
+            brailleInput |= 0b00100000;
+        } else if (command.equals("bc")) { // complete
+            Log.e("LHC", "Braille key value: complete"+Integer.toBinaryString(brailleInput));
+            brailleInput = 0;
+        } else if (command.equals("br")) { // remove
+            Log.e("LHC", "Braille key value: remove");
+            brailleInput = 0;
+        } else if (command.equals("bra")) {
+            Log.e("LHC", "Braille key value: remove all");
+            brailleInput = 0;
+        } else if (command.equals("bm")) { // mode
+            Log.e("LHC", "Braille key value: mode");
+            brailleInput |= 0b100000000;
+        } else if (command.equals("bd")) { // double character
+            Log.e("LHC", "Braille key value: double");
+            brailleInput |= 0b010000000;
+        }
+        // @} Braille keyboard
     }
 }
 

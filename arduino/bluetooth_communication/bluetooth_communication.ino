@@ -209,7 +209,7 @@ void setJoyStickDirection(int _top_m, int _bottom_m, int _left_m, int _right_m) 
 
 void checkTouchPad() {
   currtouched = cap.touched();
-  
+
   for (uint8_t i=0; i<12; i++) {
     // it if *is* touched and *wasnt* touched before, alert!
     if ((currtouched & _BV(i)) && !(lasttouched & _BV(i)) ) {
@@ -218,9 +218,35 @@ void checkTouchPad() {
     // if it *was* touched and now *isnt*, alert!
     if (!(currtouched & _BV(i)) && (lasttouched & _BV(i)) ) {
       Serial.print(i); Serial.println(" released");
+      String dir;
+      if (i == 2) { // 0
+        dir = "\rb0\n";
+      } else if (i == 6) { // 1
+        dir = "\rb1\n"; 
+      } else if (i == 1) { // 2
+        dir = "\rb2\n"; 
+      } else if (i == 5) { // 3
+        dir = "\rb3\n"; 
+      } else if (i == 0) { // 4
+        dir = "\rb4\n"; 
+      } else if (i == 4) { // 5
+        dir = "\rb5\n"; 
+      } else if (i == 10) { // remove
+        dir = "\rbr\n"; 
+      } else if (i == 9) { // mode
+        dir = "\rbm\n"; 
+      } else if (i == 8) { // complete
+        dir = "\rbc\n"; 
+      } else if (i == 7) { // dobule
+        dir = "\rbd\n";
+      } else if (i == 11) { // remove all
+        dir = "\rbra\n"; 
+      }
+     
+      writeStringBt(dir);
     }
   }
-  
+
   // reset our state
   lasttouched = currtouched;
 
