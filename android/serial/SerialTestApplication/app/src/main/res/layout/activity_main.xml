@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:orientation="vertical"
+    android:layout_height="match_parent"
+    tools:context="com.android.stickeye.serialtestapplication.MainActivity">
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/button_send1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="AT" />
+
+        <Button
+            android:id="@+id/button_send2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="AT+NAME" />
+
+        <Button
+            android:id="@+id/button_send3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="모드 변경" />
+
+        <Button
+            android:id="@+id/button_send4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="MAX" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/text_serial"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="=========================================" />
+
+            <TextView
+                android:id="@+id/text_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+
+
+
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
