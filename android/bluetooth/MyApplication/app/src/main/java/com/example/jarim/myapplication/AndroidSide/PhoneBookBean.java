@@ -29,7 +29,7 @@ import java.util.List;
 
 public class PhoneBookBean extends AppBean {
     private EditText input_etext;
-    // ¤¡, ¤¤, ¤§, ¤©, ¤±, ¤², ¤µ, ¤·, ¤¸, ¤º, ¤», ¤¼, ¤½, ¤¾, ±âÅ¸.
+    // ã„±, ã„´, ã„·, ã„¹, ã…, ã…‚, ã……, ã…‡, ã…ˆ, ã…Š, ã…‹, ã…Œ, ã…, ã…, ê¸°íƒ€.
     private ArrayList<ContactInfo>[] charPerConcats;
     private String[] subMenu;
     private int horizontal_index;
@@ -48,19 +48,19 @@ public class PhoneBookBean extends AppBean {
         for (int i = 0; i < Constants.INITIAL_SOUND.length; i++) {
             subMenu[i] = Character.toString(Constants.INITIAL_SOUND[i]);
         }
-        subMenu[14] = "±âÅ¸";
-        subMenu[15] = "¸ŞÀÎ ¸Ş´º·Î µ¹¾Æ°¡±â";
+        subMenu[14] = "ê¸°íƒ€";
+        subMenu[15] = "ë©”ì¸ ë©”ë‰´ë¡œ ëŒì•„ê°€ê¸°";
         horizontal_index = 0;
         vertical_index = -1;
     }
 
     @Override
     public boolean start(Object o) {
-        tts.ispeak("ÀüÈ­¹øÈ£ºÎÀÔ´Ï´Ù. ÁÂ¿ì·Î ¿òÁ÷ÀÏ ¶§ ÀÚÀ½À» ¼±ÅÃÇÒ ¼ö ÀÖ°í, " +
-                " »óÇÏ·Î ¿òÁ÷ÀÏ ¶§ ÀÚÀ½À¸·Î ½ÃÀÛÇÏ´Â ÀÌ¸§À» ¼±ÅÃÇÒ ¼ö ÀÖ½À´Ï´Ù.");
+        tts.ispeak("ì „í™”ë²ˆí˜¸ë¶€ì…ë‹ˆë‹¤. ì¢Œìš°ë¡œ ì›€ì§ì¼ ë•Œ ììŒì„ ì„ íƒí•  ìˆ˜ ìˆê³ , " +
+                " ìƒí•˜ë¡œ ì›€ì§ì¼ ë•Œ ììŒìœ¼ë¡œ ì‹œì‘í•˜ëŠ” ì´ë¦„ì„ ì„ íƒí•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.");
         ArrayList<ContactInfo> contacts = getUserContactsList();
         MultiDimensionMenu.MENU_LEVEL = Constants.SUB_MENU_MODE;
-        // @{ ÇÑ±Û ÀÚÀ½ Á¤·Ä
+        // @{ í•œê¸€ ììŒ ì •ë ¬
         final Comparator<ContactInfo> comparator = new Comparator<ContactInfo>() {
             @Override
             public int compare(ContactInfo contactInfo, ContactInfo t1) {
@@ -70,14 +70,14 @@ public class PhoneBookBean extends AppBean {
             }
         };
         Collections.sort(contacts, comparator);
-        // @} ÇÑ±Û ÀÚÀ½ Á¤·Ä Á¾·á
+        // @} í•œê¸€ ììŒ ì •ë ¬ ì¢…ë£Œ
 
         int no = 0;
         for (ContactInfo cInfo : contacts) {
             char c = getChosung(cInfo.getName().charAt(0));
             Log.e("LHC", "CHAR:"+Character.toString(c));
             int index = getIndexOfHangul(c);
-            Log.e("LHC","<"+Integer.toString(no++)+"> "+"ÀÌ¸§: "+cInfo.getName()+", ¹øÈ£:"+cInfo.getPhoneNum()+"-->"+Integer.toString(index));
+            Log.e("LHC","<"+Integer.toString(no++)+"> "+"ì´ë¦„: "+cInfo.getName()+", ë²ˆí˜¸:"+cInfo.getPhoneNum()+"-->"+Integer.toString(index));
             charPerConcats[index].add(cInfo);
         }
 
@@ -163,25 +163,25 @@ public class PhoneBookBean extends AppBean {
      */
     private int getIndexOfHangul(char c) {
         switch (c) {
-            case '¤¡':case '¤¢':
+            case 'ã„±':case 'ã„²':
                 return 0;
-            case '¤¤': return 1;
-            case '¤§':case '¤¨':
+            case 'ã„´': return 1;
+            case 'ã„·':case 'ã„¸':
                 return 2;
-            case '¤©': return 3;
-            case '¤±': return 4;
-            case '¤²':case '¤³':
+            case 'ã„¹': return 3;
+            case 'ã…': return 4;
+            case 'ã…‚':case 'ã…ƒ':
                 return 5;
-            case '¤µ':case '¤¶':
+            case 'ã……':case 'ã…†':
                 return 6;
-            case '¤·': return 7;
-            case '¤¸':case '¤¹':
+            case 'ã…‡': return 7;
+            case 'ã…ˆ':case 'ã…‰':
                 return 8;
-            case '¤º': return 9;
-            case '¤»': return 10;
-            case '¤¼': return 11;
-            case '¤½': return 12;
-            case '¤¾': return 13;
+            case 'ã…Š': return 9;
+            case 'ã…‹': return 10;
+            case 'ã…Œ': return 11;
+            case 'ã…': return 12;
+            case 'ã…': return 13;
         }
         return 14;
     }
@@ -237,12 +237,12 @@ public class PhoneBookBean extends AppBean {
     @Override
     public void click() {
         if (horizontal_index == 15) {
-            tts.ispeak("¸ŞÀÎ ¸Ş´º·Î µ¹¾Æ°©´Ï´Ù.");
+            tts.ispeak("ë©”ì¸ ë©”ë‰´ë¡œ ëŒì•„ê°‘ë‹ˆë‹¤.");
             MultiDimensionMenu.MENU_LEVEL = Constants.MAIN_MENU_MODE;
         } else if (vertical_index > -1) {
-            // ¸¸¾à ÀüÈ­¹øÈ£°¡ ¼±ÅÃµÈ »óÅÂÀÏ °æ¿ì.
-            // vertical_index°¡ -1ÀÌ¶ó´Â °ÍÀº, ¾ÆÁ÷ ¼±ÅÃµÈ ¹øÈ£°¡ ¾ø´Â ¸Ş´º »óÅÂ¶ó´Â ¶æÀÌ´Ù.
-            tts.sspeak("ÀüÈ­¸¦ °Ì´Ï´Ù.");
+            // ë§Œì•½ ì „í™”ë²ˆí˜¸ê°€ ì„ íƒëœ ìƒíƒœì¼ ê²½ìš°.
+            // vertical_indexê°€ -1ì´ë¼ëŠ” ê²ƒì€, ì•„ì§ ì„ íƒëœ ë²ˆí˜¸ê°€ ì—†ëŠ” ë©”ë‰´ ìƒíƒœë¼ëŠ” ëœ»ì´ë‹¤.
+            tts.sspeak("ì „í™”ë¥¼ ê²ë‹ˆë‹¤.");
             ContactInfo cInfo = charPerConcats[horizontal_index].get(vertical_index);
             Intent intent = new Intent(Intent.ACTION_CALL,
                     Uri.parse("tel:" + cInfo.getPhoneNum()));

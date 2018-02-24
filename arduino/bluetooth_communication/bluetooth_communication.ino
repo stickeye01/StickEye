@@ -221,13 +221,13 @@ void checkTouchPad() {
       String dir;
       if (i == 2) { // 0
         dir = "\rb0\n";
-      } else if (i == 6) { // 1
+      } else if (i == 1) { // 1
         dir = "\rb1\n"; 
-      } else if (i == 1) { // 2
+      } else if (i == 0) { // 2
         dir = "\rb2\n"; 
-      } else if (i == 5) { // 3
+      } else if (i == 6) { // 3
         dir = "\rb3\n"; 
-      } else if (i == 0) { // 4
+      } else if (i == 5) { // 4
         dir = "\rb4\n"; 
       } else if (i == 4) { // 5
         dir = "\rb5\n"; 

@@ -112,8 +112,45 @@
         android:id="@+id/click2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/usb_stat"
+        android:layout_below="@+id/b_input"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="114dp"
+        android:layout_marginTop="81dp"
         android:text="CLICK" />
+
+    <TextView
+        android:id="@+id/b_mode_txt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/b_mode"
+        android:layout_alignBottom="@+id/b_mode"
+        android:layout_alignLeft="@+id/b_input_txt"
+        android:layout_alignStart="@+id/b_input_txt"
+        android:text="Braille Mode:" />
+
+    <TextView
+        android:id="@+id/b_mode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/b_input"
+        android:layout_toEndOf="@+id/click2"
+        android:layout_toRightOf="@+id/click2"
+        android:text="kor" />
+
+    <TextView
+        android:id="@+id/b_input_txt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/b_input"
+        android:layout_alignBottom="@+id/b_input"
+        android:layout_alignEnd="@+id/usb_stat"
+        android:layout_alignRight="@+id/usb_stat"
+        android:text="Braille Input:" />
+
+    <TextView
+        android:id="@+id/b_input"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/b_mode"
+        android:layout_alignStart="@+id/b_mode"
+        android:layout_centerVertical="true" />
 </RelativeLayout>

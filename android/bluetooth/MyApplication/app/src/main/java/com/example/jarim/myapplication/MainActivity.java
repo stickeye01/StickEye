@@ -28,6 +28,7 @@ import android.widget.Toast;
 
 import com.example.jarim.myapplication.AndroidSide.MultiDimensionMenu;
 import com.example.jarim.myapplication.USBConnector.SerialConnector;
+import com.example.jarim.myapplication.BrailleKeyboard.BrailleKeyboard;
 
 import java.io.UnsupportedEncodingException;
 
@@ -88,6 +89,10 @@ public class MainActivity extends Activity implements OnClickListener {
 
     // Braille keyboard
     private char brailleInput = 0;
+    private BrailleKeyboard braille;
+    private TextView bMode;
+    private TextView bInput;
+    private int bModeNo = 0;
 
     /*
      * Check whether Bluetooth network is working or not.
@@ -281,6 +286,11 @@ public class MainActivity extends Activity implements OnClickListener {
         filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
         filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
         registerReceiver(bluetoothTurnedOnOff, filter);
+
+        // Braille
+        braille = new BrailleKeyboard(tts);
+        bInput = findViewById(R.id.b_input);
+        bMode = findViewById(R.id.b_mode);
     }
 
     /**
@@ -472,13 +482,27 @@ public class MainActivity extends Activity implements OnClickListener {
             Log.e("LHC", "Braille key value: 5");
             brailleInput |= 0b00100000;
         } else if (command.equals("bc")) { // complete
+            braille.translateB2C(brailleInput);
+            bInput.setText(BrailleKeyboard.resultString);
             Log.e("LHC", "Braille key value: complete"+Integer.toBinaryString(brailleInput));
+            if ((brailleInput & 0b10000000) == 0b100000000) {
+                bModeNo ++;
+                bModeNo %= 4;
+                if (bModeNo == 0) bMode.setText("Kor");
+                else if (bModeNo == 1) bMode.setText("Eng(s)");
+                else if (bModeNo == 2) bMode.setText("Eng(u)");
+                else if (bModeNo == 3) bMode.setText("num");
+            }
             brailleInput = 0;
         } else if (command.equals("br")) { // remove
             Log.e("LHC", "Braille key value: remove");
+            braille.removeOneChar();
+            bInput.setText(BrailleKeyboard.resultString);
             brailleInput = 0;
         } else if (command.equals("bra")) {
             Log.e("LHC", "Braille key value: remove all");
+            braille.removeAll();
+            bInput.setText(BrailleKeyboard.resultString);
             brailleInput = 0;
         } else if (command.equals("bm")) { // mode
             Log.e("LHC", "Braille key value: mode");
