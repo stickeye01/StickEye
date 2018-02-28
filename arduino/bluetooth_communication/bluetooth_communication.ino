@@ -18,10 +18,12 @@ int joystick_y = A1;
 int joystick_press = 9;
 int blue_Tx = 7;  //블루투스 모듈의 T(Transmitt)x를 Digital pin 9번에 연결
 int blue_Rx = 4;  //블루투스 모듈의 R(Receive)x를 Digital pin 10번에 연결
+
 int bufferSize = 0;
 //String mac_addr = "rn00:21:13:01:51:5D\n"; // 박효정 MAC_ID
 String mac_addr = "\r20:16:05:19:90:62\n"; // 이호찬 MAC_ID
 //00:21:13:01:51:5D//??
+int isSerialMode = 0;
 
 int top_m = 0;
 int bottom_m = 0;
@@ -50,13 +52,13 @@ void setup(){
   BTSerial.begin(9600);
   Serial.begin(9600);
 
-  //pinMode(ledPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
   
-  //pinMode(joystick_press, INPUT);
-  //digitalWrite(joystick_press, HIGH);
+  pinMode(joystick_press, INPUT);
+  digitalWrite(joystick_press, HIGH);
 
-  //pinMode(SCL_PIN, OUTPUT);
-  //pinMode(SDO_PIN, INPUT);
+  pinMode(SCL_PIN, OUTPUT);
+  pinMode(SDO_PIN, INPUT);
  
   index =0;
   bufferSize = 0;
@@ -64,11 +66,11 @@ void setup(){
 
 void loop(){
     serialMode();
-    //delay(1000);
-    //bluetoothMode();
-    
-    //sendJoyStickInput();
-    //checkTouchPad();
+    if (isSerialMode == 0) {   // While Arduino is being in serial mode, then ignore others.
+      bluetoothMode();
+      sendJoyStickInput();
+      checkTouchPad();
+    }
     
     //if(BTSerial.available()){
     //  Serial.write(BTSerial.read());
@@ -110,9 +112,11 @@ void serialMode(){
     char c = (char) Serial.read();
     delay(1);
     if (c == '\0') {
+      isSerialMode = 0;
       command = "";
       delay(1);
     } else {
+      isSerialMode = 1;
       command.concat(c);
       delay(1);
     }
@@ -152,17 +156,17 @@ void writeStringBt(String stringData) {
 }
 
 /**
- * JoyStick 입력에 따라 Bluetooth 전송.
+ * Send Bluetooth based on JoyStick inputs.
  */
 void sendJoyStickInput() {
   // put your main code here, to run repeatedly:
   int x = analogRead(joystick_x);
   int y = analogRead(joystick_y);
 
-  // 조이스틱 클릭 시 사용.
+  // Process clicking the button.
   if (digitalRead(joystick_press) == LOW && 
         x >= 400 && x <= 600 && y >= 400 && y <= 600 && sel_m == 0) {
-      Serial.print("선");
+      Serial.print("s");
       // If clicked the joystick button
       char dir[] = "\rds\n";
       writeStringBt(dir);
@@ -170,15 +174,15 @@ void sendJoyStickInput() {
   }
   if (digitalRead(joystick_press) == HIGH) sel_m = 0;
 
-  // 조이스틱 방향 별 작업.
+  // Tasks per joystick direction.
   if (y >= 400 && y <= 600) {
     if (x >= 600 && x <= 1023 && right_m == 0) {
-      Serial.print("우");
+      Serial.print("r");
       setJoyStickDirection(0, 0, 0, 1);
       char dir[] = "\rdr\n";
       writeStringBt(dir);
     } else if(x >= 0 && x <= 400 && left_m == 0) {
-      Serial.print("좌");
+      Serial.print("l");
       setJoyStickDirection(0, 0, 1, 0);
       char dir[] = "\rdl\n";
       writeStringBt(dir);
@@ -187,12 +191,12 @@ void sendJoyStickInput() {
       setJoyStickDirection(0, 0, 0, 0);
   } else if (x >= 400 && x <= 600) {
     if (y >= 600 && y <= 1023 && bottom_m == 0) {
-      Serial.print("하");
+      Serial.print("b");
       setJoyStickDirection(0, 1, 0, 0);
       char dir[] = "\rdb\n";
       writeStringBt(dir);
     } else if(y >= 0 && y <=400 && top_m == 0) {
-      Serial.print("상");
+      Serial.print("u");
       setJoyStickDirection(1, 0, 0, 0);
       char dir[] = "\rdt\n";
       writeStringBt(dir);
@@ -203,7 +207,7 @@ void sendJoyStickInput() {
 }
 
 /**
- *  flag 변수 설정 함수.
+ *  Set the flags.
  */
 void setJoyStickDirection(int _top_m, int _bottom_m, int _left_m, int _right_m) {
   top_m = _top_m;
@@ -212,27 +216,9 @@ void setJoyStickDirection(int _top_m, int _bottom_m, int _left_m, int _right_m) 
   right_m = _right_m;
 }
 
-byte readKeyPad() {
-  byte count;
-  byte keyState = 0;
-  int onOff = 0;
-  
-  /* Pulse the clock pin 16 times (one for each key of the keypad)
-   * and read the state of the data pin on each pulse   */
-  for (count = 1; count <= 16; count++) {
-    digitalWrite(SCL_PIN, LOW);
-
-    /* If the data pin is low (active low mode)
-    then store the current key number */
-    if (!digitalRead(SDO_PIN))
-      keyState = count;
-      
-    digitalWrite(SCL_PIN, HIGH);
-  }
-
-  return keyState;
-}
-
+/**
+ * Check touchpad and send the values to the smartphone.
+ */
 void checkTouchPad() {
   uint16_t key = ttp229.ReadKey16(); // Blocking
   int i = key-8;
@@ -253,12 +239,10 @@ void checkTouchPad() {
       dir = "\rb5\n"; 
     } else if (i == 9) { // remove
       dir = "\rbr\n"; 
-      Serial.println(">>R"+String(i));
     } else if (i == 4) { // mode
       dir = "\rbm\n"; 
     } else if (i == 8) { // complete
       dir = "\rbc\n"; 
-      Serial.println(">>C"+String(i));
     } else if (i == 7) { // dobule
       dir = "\rbd\n";
     } else if (i == 11) { // remove all
@@ -268,7 +252,6 @@ void checkTouchPad() {
     writeStringBt(dir);
     delay(100);
   }
-  // comment out this line for detailed data from the sensor!
   return;
 }
 
