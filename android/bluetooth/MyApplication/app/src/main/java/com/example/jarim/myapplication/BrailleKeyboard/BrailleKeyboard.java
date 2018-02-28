@@ -53,15 +53,15 @@ public class BrailleKeyboard {
      */
     public void translateB2C(char _input) {
         int[] input = parsing(_input);
-        // if the mode is changed.
-        if (input[7] == 1) {
-            modeFlag ++;
-            modeFlag %= 4;
-        }
         isDoubleCharacter(input);
-        String test = start(input, modeFlag);
+        String test = start(input);
         Log.e("LHC", ">>>>>>>>>>"+test);
         tts.ispeak(test);
+    }
+
+    public void changeMode() {
+        modeFlag ++;
+        modeFlag %= 4;
     }
 
     /**
@@ -94,7 +94,7 @@ public class BrailleKeyboard {
         }
     }
 
-    public String start(int input[], int modeFlag) {
+    public String start(int input[]) {
         int flag = 0;
         for (int i = 0; i < 6; i++) {
             if (input[i] == 1) {

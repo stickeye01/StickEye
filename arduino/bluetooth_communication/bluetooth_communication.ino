@@ -1,16 +1,16 @@
  #include <SoftwareSerial.h>
  #include <Wire.h>
- #include "Adafruit_MPR121.h"
+#include "TTP229.h"
 
 #define BUFF_SIZE 256
+#define SCL_PIN 2
+#define SDO_PIN 3
+TTP229 ttp229(SCL_PIN, SDO_PIN); // TTP229(sclPin, sdoPin)
 
-// You can have up to 4 on one i2c bus but one is enough for testing!
-Adafruit_MPR121 cap = Adafruit_MPR121();
 
-// Keeps track of the last pins touched
-// so we know when buttons are 'released'
-uint16_t lasttouched = 0;
-uint16_t currtouched = 0;
+byte touchedKey;
+volatile uint16_t btnState;
+static uint16_t oldState = 9999;
 
 int joystick_x = A0;
 int joystick_y = A1;
@@ -46,28 +46,25 @@ String command = "";
 *초기 접속시에는 비밀번호 입력
 */
 void setup(){
-  pinMode(joystick_press, INPUT);
-  digitalWrite(joystick_press, HIGH);
   BTSerial.begin(9600);
   Serial.begin(9600);
 
+  pinMode(joystick_press, INPUT);
+  digitalWrite(joystick_press, HIGH);
+
+  pinMode(SCL_PIN, OUTPUT);
+  pinMode(SDO_PIN, INPUT);
+  
   while (!Serial) {
     delay(10);
   }
-
-  if (!cap.begin(0x5A)) {
-    Serial.println("MPR121 not found, check wiring?");
-    while (1);
-  }
-  Serial.println("MPR121 found!");
-  
   index =0;
   bufferSize = 0;
 }
 
 void loop(){
-    checkTouchPad();
     serialMode();
+    checkTouchPad();
     sendJoyStickInput();
     //bluetoothMode();
     //if(BTSerial.available()){
@@ -118,7 +115,7 @@ void serialMode(){
     }
          
     if(command.equals("MAC_ADDR")){
-      //Serial.println(mac_addr);
+      Serial.println(mac_addr);
       writeStringUsb(mac_addr);
     }
   } //
@@ -207,50 +204,64 @@ void setJoyStickDirection(int _top_m, int _bottom_m, int _left_m, int _right_m) 
   right_m = _right_m;
 }
 
-void checkTouchPad() {
-  currtouched = cap.touched();
+byte readKeyPad() {
+  byte count;
+  byte keyState = 0;
+  int onOff = 0;
+  
+  /* Pulse the clock pin 16 times (one for each key of the keypad)
+   * and read the state of the data pin on each pulse   */
+  for (count = 1; count <= 16; count++) {
+    digitalWrite(SCL_PIN, LOW);
 
-  for (uint8_t i=0; i<12; i++) {
-    // it if *is* touched and *wasnt* touched before, alert!
-    if ((currtouched & _BV(i)) && !(lasttouched & _BV(i)) ) {
-      Serial.print(i); Serial.println(" touched");
-    }
-    // if it *was* touched and now *isnt*, alert!
-    if (!(currtouched & _BV(i)) && (lasttouched & _BV(i)) ) {
-      Serial.print(i); Serial.println(" released");
-      String dir;
-      if (i == 2) { // 0
-        dir = "\rb0\n";
-      } else if (i == 1) { // 1
-        dir = "\rb1\n"; 
-      } else if (i == 0) { // 2
-        dir = "\rb2\n"; 
-      } else if (i == 6) { // 3
-        dir = "\rb3\n"; 
-      } else if (i == 5) { // 4
-        dir = "\rb4\n"; 
-      } else if (i == 4) { // 5
-        dir = "\rb5\n"; 
-      } else if (i == 10) { // remove
-        dir = "\rbr\n"; 
-      } else if (i == 9) { // mode
-        dir = "\rbm\n"; 
-      } else if (i == 8) { // complete
-        dir = "\rbc\n"; 
-      } else if (i == 7) { // dobule
-        dir = "\rbd\n";
-      } else if (i == 11) { // remove all
-        dir = "\rbra\n"; 
-      }
-     
-      writeStringBt(dir);
-    }
+    /* If the data pin is low (active low mode)
+    then store the current key number */
+    if (!digitalRead(SDO_PIN))
+      keyState = count;
+      
+    digitalWrite(SCL_PIN, HIGH);
   }
 
-  // reset our state
-  lasttouched = currtouched;
+  return keyState;
+}
 
+void checkTouchPad() {
+  uint16_t key = ttp229.ReadKey16(); // Blocking
+  int i = key-8;
+  if (key) {
+    Serial.println(i);
+    String dir;
+    if (i == 3) { // 0
+      dir = "\rb0\n";
+    } else if (i == 2) { // 1
+      dir = "\rb1\n"; 
+    } else if (i == 1) { // 2
+      dir = "\rb2\n"; 
+    } else if (i == 7) { // 3
+      dir = "\rb3\n"; 
+    } else if (i == 6) { // 4
+      dir = "\rb4\n"; 
+    } else if (i == 5) { // 5
+      dir = "\rb5\n"; 
+    } else if (i == 9) { // remove
+      dir = "\rbr\n"; 
+      Serial.println(">>R"+String(i));
+    } else if (i == 4) { // mode
+      dir = "\rbm\n"; 
+    } else if (i == 8) { // complete
+      dir = "\rbc\n"; 
+      Serial.println(">>C"+String(i));
+    } else if (i == 7) { // dobule
+      dir = "\rbd\n";
+    } else if (i == 11) { // remove all
+      dir = "\rbra\n"; 
+    }
+   
+    writeStringBt(dir);
+    delay(100);
+  }
   // comment out this line for detailed data from the sensor!
   return;
 }
+
 

@@ -319,6 +319,7 @@ public class SerialConnector {
                 }
 
                 if(mPort != null) {
+                    Log.e("LHC", "mPort is not null in SerialMonitorThread");
                     Arrays.fill(buffer, (byte)0x00);
                     try {
                         // Read received buffer

@@ -485,14 +485,6 @@ public class MainActivity extends Activity implements OnClickListener {
             braille.translateB2C(brailleInput);
             bInput.setText(BrailleKeyboard.resultString);
             Log.e("LHC", "Braille key value: complete"+Integer.toBinaryString(brailleInput));
-            if ((brailleInput & 0b10000000) == 0b100000000) {
-                bModeNo ++;
-                bModeNo %= 4;
-                if (bModeNo == 0) bMode.setText("Kor");
-                else if (bModeNo == 1) bMode.setText("Eng(s)");
-                else if (bModeNo == 2) bMode.setText("Eng(u)");
-                else if (bModeNo == 3) bMode.setText("num");
-            }
             brailleInput = 0;
         } else if (command.equals("br")) { // remove
             Log.e("LHC", "Braille key value: remove");
@@ -506,10 +498,16 @@ public class MainActivity extends Activity implements OnClickListener {
             brailleInput = 0;
         } else if (command.equals("bm")) { // mode
             Log.e("LHC", "Braille key value: mode");
-            brailleInput |= 0b100000000;
+            bModeNo ++;
+            bModeNo %= 4;
+            if (bModeNo == 0) bMode.setText("Kor");
+            else if (bModeNo == 1) bMode.setText("Eng(s)");
+            else if (bModeNo == 2) bMode.setText("Eng(u)");
+            else if (bModeNo == 3) bMode.setText("num");
+            braille.changeMode();
         } else if (command.equals("bd")) { // double character
             Log.e("LHC", "Braille key value: double");
-            brailleInput |= 0b010000000;
+            brailleInput |= 0b01000000;
         }
         // @} Braille keyboard
     }
