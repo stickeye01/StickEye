@@ -101,7 +101,7 @@ uint8_t TTP229::GetKeys8()
 }
 uint8_t TTP229::ReadKey16()
 {
-	WaitForTouch();
+	//WaitForTouch();
 	Key16();
 	return _key16;
 }

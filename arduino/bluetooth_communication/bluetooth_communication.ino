@@ -7,6 +7,7 @@
 #define SDO_PIN 3
 TTP229 ttp229(SCL_PIN, SDO_PIN); // TTP229(sclPin, sdoPin)
 
+int ledPin = 13;
 
 byte touchedKey;
 volatile uint16_t btnState;
@@ -49,24 +50,26 @@ void setup(){
   BTSerial.begin(9600);
   Serial.begin(9600);
 
-  pinMode(joystick_press, INPUT);
-  digitalWrite(joystick_press, HIGH);
-
-  pinMode(SCL_PIN, OUTPUT);
-  pinMode(SDO_PIN, INPUT);
+  //pinMode(ledPin, OUTPUT);
   
-  while (!Serial) {
-    delay(10);
-  }
+  //pinMode(joystick_press, INPUT);
+  //digitalWrite(joystick_press, HIGH);
+
+  //pinMode(SCL_PIN, OUTPUT);
+  //pinMode(SDO_PIN, INPUT);
+ 
   index =0;
   bufferSize = 0;
 }
 
 void loop(){
     serialMode();
-    checkTouchPad();
-    sendJoyStickInput();
+    //delay(1000);
     //bluetoothMode();
+    
+    //sendJoyStickInput();
+    //checkTouchPad();
+    
     //if(BTSerial.available()){
     //  Serial.write(BTSerial.read());
     //  delay(500);
@@ -116,6 +119,11 @@ void serialMode(){
          
     if(command.equals("MAC_ADDR")){
       Serial.println(mac_addr);
+      
+ //     digitalWrite(ledPin, HIGH);
+   //   delay(1000);
+     // digitalWrite(ledPin, LOW);
+     // delay(1000);
       writeStringUsb(mac_addr);
     }
   } //
