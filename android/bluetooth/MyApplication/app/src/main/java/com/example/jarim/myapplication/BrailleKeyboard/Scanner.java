@@ -1,5 +1,7 @@
 package com.example.jarim.myapplication.BrailleKeyboard;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 
@@ -94,7 +96,6 @@ public class Scanner {
             }
 
             if(targetList!=null){
-
                 if(targetList.size() == 1){
                     token = (Token) targetList.getFirst();
                 }else if(targetList.size() == 0){

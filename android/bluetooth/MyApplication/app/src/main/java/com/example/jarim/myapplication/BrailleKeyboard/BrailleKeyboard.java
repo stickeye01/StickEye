@@ -53,9 +53,7 @@ public class BrailleKeyboard {
      */
     public void translateB2C(char _input) {
         int[] input = parsing(_input);
-        isDoubleCharacter(input);
         String test = start(input);
-        Log.e("LHC", ">>>>>>>>>>"+test);
         tts.ispeak(test);
     }
 
@@ -71,20 +69,23 @@ public class BrailleKeyboard {
      */
     private int[] parsing(char _input) {
         int i=6,a;
-        int input[] = new int[8];
+        int input[] = new int[6];
 
-        for(i = 0; i < 8; i++) {
+        for(i = 0; i < 6; i++) {
             a = _input & 1;
             _input >>= 1;
             input[i] = a;
         }
-        Log.e("LHC", "Braille:"+input.toString());
+
+        int isDouble = _input & 1;
+        isDoubleCharacter(isDouble, input);
+
         return input;
     }
 
 
-    public void isDoubleCharacter(int input[]) {
-        if (input[6] == 1) {
+    public void isDoubleCharacter(int isDouble, int input[]) {
+        if (isDouble == 1) {
             init(oneinput);
             for (int i = 0; i < 6; i++) {
                 oneinput[i] = input[i];
@@ -97,9 +98,7 @@ public class BrailleKeyboard {
     public String start(int input[]) {
         int flag = 0;
         for (int i = 0; i < 6; i++) {
-            if (input[i] == 1) {
-                flag = 1;
-            }
+            if (input[i] == 1)      flag = 1;
         }
 
         if (flag == 1) {
