@@ -39,4 +39,14 @@ public class Constants {
 
     public static final int MAIN_MENU_MODE = 0;
     public static final int SUB_MENU_MODE = 1;
+    public static final int BRAILLE_CLICK_MODE = 2;
+    public static int MENU_LEVEL = Constants.MAIN_MENU_MODE;
+
+    public static final int BRAILLE_KEYBOARD_OFF = 0;
+    public static final int BRAILLE_KEYBOARD_ON = 1;
+    public static int KEYBOARD_MODE = Constants.BRAILLE_KEYBOARD_OFF;
+    public static int B_KOR_MODE = 0;
+    public static int B_ENG_I_MODE = 1;
+    public static int B_ENG_U_MODE = 2;
+    public static int B_NUM_MODE = 3;
 }

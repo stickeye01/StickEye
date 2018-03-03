@@ -23,6 +23,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -92,6 +93,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private BrailleKeyboard braille;
     private TextView bMode;
     private TextView bInput;
+    private EditText testInput;
     private int bModeNo = 0;
 
     /*
@@ -241,8 +243,13 @@ public class MainActivity extends Activity implements OnClickListener {
         btn_connect.setOnClickListener(this);
         btn_register.setOnClickListener(this);
 
-        // TEST Layout
-        mDimMenu = new MultiDimensionMenu(tts, this);
+        // Braille
+        braille = new BrailleKeyboard(tts, this);
+        bInput = findViewById(R.id.b_input);
+        bMode = findViewById(R.id.b_mode);
+        testInput = findViewById(R.id.test_input);
+
+        mDimMenu = new MultiDimensionMenu(tts, this, braille);
 
         if (btService == null) {
             btService = new BluetoothService(this, btHandler);
@@ -286,11 +293,6 @@ public class MainActivity extends Activity implements OnClickListener {
         filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
         filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
         registerReceiver(bluetoothTurnedOnOff, filter);
-
-        // Braille
-        braille = new BrailleKeyboard(tts);
-        bInput = findViewById(R.id.b_input);
-        bMode = findViewById(R.id.b_mode);
     }
 
     /**
@@ -463,51 +465,49 @@ public class MainActivity extends Activity implements OnClickListener {
         }
         //  @} Joystick --
         //  @{ Braille keyboard
-        else if (command.equals("b0")) {
-            Log.e("LHC", "Braille key value: 0");
-            brailleInput |= 0b00000001;
-        } else if (command.equals("b1")) {
-            Log.e("LHC", "Braille key value: 1");
-            brailleInput |= 0b00000010;
-        } else if (command.equals("b2")) {
-            Log.e("LHC", "Braille key value: 2");
-            brailleInput |= 0b00000100;
-        } else if (command.equals("b3")) {
-            Log.e("LHC", "Braille key value: 3");
-            brailleInput |= 0b00001000;
-        } else if (command.equals("b4")) {
-            Log.e("LHC", "Braille key value: 4");
-            brailleInput |= 0b00010000;
-        } else if (command.equals("b5")) {
-            Log.e("LHC", "Braille key value: 5");
-            brailleInput |= 0b00100000;
-        } else if (command.equals("bc")) { // complete
-            braille.translateB2C(brailleInput);
-            bInput.setText(BrailleKeyboard.resultString);
-            Log.e("LHC", "Braille key value: complete"+Integer.toBinaryString(brailleInput));
-            brailleInput = 0;
-        } else if (command.equals("br")) { // remove
-            Log.e("LHC", "Braille key value: remove");
-            braille.removeOneChar();
-            bInput.setText(BrailleKeyboard.resultString);
-            brailleInput = 0;
-        } else if (command.equals("bra")) {
-            Log.e("LHC", "Braille key value: remove all");
-            braille.removeAll();
-            bInput.setText(BrailleKeyboard.resultString);
-            brailleInput = 0;
-        } else if (command.equals("bm")) { // mode
-            Log.e("LHC", "Braille key value: mode");
-            bModeNo ++;
-            bModeNo %= 4;
-            if (bModeNo == 0) bMode.setText("Kor");
-            else if (bModeNo == 1) bMode.setText("Eng(s)");
-            else if (bModeNo == 2) bMode.setText("Eng(u)");
-            else if (bModeNo == 3) bMode.setText("num");
-            braille.changeMode();
-        } else if (command.equals("bd")) { // double character
-            Log.e("LHC", "Braille key value: double");
-            brailleInput |= 0b01000000;
+        if (Constants.KEYBOARD_MODE == Constants.BRAILLE_KEYBOARD_ON) {
+            if (command.equals("b0")) {
+                Log.e("LHC", "Braille key value: 0");
+                brailleInput |= 0b00000001;
+            } else if (command.equals("b1")) {
+                Log.e("LHC", "Braille key value: 1");
+                brailleInput |= 0b00000010;
+            } else if (command.equals("b2")) {
+                Log.e("LHC", "Braille key value: 2");
+                brailleInput |= 0b00000100;
+            } else if (command.equals("b3")) {
+                Log.e("LHC", "Braille key value: 3");
+                brailleInput |= 0b00001000;
+            } else if (command.equals("b4")) {
+                Log.e("LHC", "Braille key value: 4");
+                brailleInput |= 0b00010000;
+            } else if (command.equals("b5")) {
+                Log.e("LHC", "Braille key value: 5");
+                brailleInput |= 0b00100000;
+            } else if (command.equals("bc")) { // complete
+                braille.translateB2C(brailleInput);
+                bInput.setText(BrailleKeyboard.resultString);
+                testInput.setText(BrailleKeyboard.resultString);
+                Log.e("LHC", "Braille key value: complete" +
+                                            Integer.toBinaryString(brailleInput));
+                brailleInput = 0;
+            } else if (command.equals("br")) { // remove
+                Log.e("LHC", "Braille key value: remove");
+                braille.removeOneChar();
+                bInput.setText(BrailleKeyboard.resultString);
+                brailleInput = 0;
+            } else if (command.equals("bra")) {
+                Log.e("LHC", "Braille key value: remove all");
+                braille.removeAll();
+                bInput.setText(BrailleKeyboard.resultString);
+                brailleInput = 0;
+            } else if (command.equals("bm")) { // mode
+                Log.e("LHC", "Braille key value: mode");
+                braille.changeMode();
+            } else if (command.equals("bd")) { // double character
+                Log.e("LHC", "Braille key value: double");
+                brailleInput |= 0b01000000;
+            }
         }
         // @} Braille keyboard
     }

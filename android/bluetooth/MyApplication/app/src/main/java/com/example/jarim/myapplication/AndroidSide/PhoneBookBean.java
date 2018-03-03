@@ -13,6 +13,7 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.EditText;
 
+import com.example.jarim.myapplication.BrailleKeyboard.BrailleKeyboard;
 import com.example.jarim.myapplication.Constants;
 import com.example.jarim.myapplication.R;
 import com.example.jarim.myapplication.TtsService;
@@ -35,8 +36,9 @@ public class PhoneBookBean extends AppBean {
     private int horizontal_index;
     private int vertical_index;
 
-    public PhoneBookBean(String _name, String _intentName, TtsService _tts, Context _ctx) {
-        super(_name, _intentName, _tts, _ctx);
+    public PhoneBookBean(String _name, String _intentName, TtsService _tts, Context _ctx,
+                         BrailleKeyboard _bKey) {
+        super(_name, _intentName, _tts, _ctx, _bKey);
         input_etext = (EditText) mActivity.findViewById(R.id.test_input);
 
         charPerConcats = new ArrayList[15];
@@ -59,7 +61,7 @@ public class PhoneBookBean extends AppBean {
         tts.ispeak("전화번호부입니다. 좌우로 움직일 때 자음을 선택할 수 있고, " +
                 " 상하로 움직일 때 자음으로 시작하는 이름을 선택할 수 있습니다.");
         ArrayList<ContactInfo> contacts = getUserContactsList();
-        MultiDimensionMenu.MENU_LEVEL = Constants.SUB_MENU_MODE;
+        Constants.MENU_LEVEL = Constants.SUB_MENU_MODE;
         // @{ 한글 자음 정렬
         final Comparator<ContactInfo> comparator = new Comparator<ContactInfo>() {
             @Override
@@ -82,11 +84,6 @@ public class PhoneBookBean extends AppBean {
         }
 
         return true;
-    }
-
-    @Override
-    public void clicked(Object _v) {
-
     }
 
     private ArrayList<ContactInfo> getUserContactsList() {
@@ -238,7 +235,7 @@ public class PhoneBookBean extends AppBean {
     public void click() {
         if (horizontal_index == 15) {
             tts.ispeak("메인 메뉴로 돌아갑니다.");
-            MultiDimensionMenu.MENU_LEVEL = Constants.MAIN_MENU_MODE;
+            Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
         } else if (vertical_index > -1) {
             // 만약 전화번호가 선택된 상태일 경우.
             // vertical_index가 -1이라는 것은, 아직 선택된 번호가 없는 메뉴 상태라는 뜻이다.

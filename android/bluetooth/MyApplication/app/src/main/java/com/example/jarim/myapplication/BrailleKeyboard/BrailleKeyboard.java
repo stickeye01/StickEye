@@ -1,5 +1,7 @@
 package com.example.jarim.myapplication.BrailleKeyboard;
 
+import android.app.Activity;
+import android.content.Context;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -10,11 +12,13 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.jarim.myapplication.Constants;
+import com.example.jarim.myapplication.R;
 import com.example.jarim.myapplication.TtsService;
 
 public class BrailleKeyboard {
 
-    public int modeFlag = 0;
+    public int modeFlag = 0;    // 0: Kor, 1: Eng(l), 2: Eng(U), 3: Num
     private String[] modeStr = {"한글", "영어 소문자", "영어 대문자", "숫자"};
 
     private Scanner scan = new Scanner();
@@ -28,9 +32,14 @@ public class BrailleKeyboard {
     private boolean doublemode = false;
     private char value;
     private TtsService tts;
+    private int isModeLock = 0;
 
-    public BrailleKeyboard(TtsService _tts) {
+    private TextView bMode;
+
+    public BrailleKeyboard(TtsService _tts, Context _ctx) {
         tts = _tts;
+        Activity activity = (Activity) _ctx;
+        bMode = activity.findViewById(R.id.b_mode);
     }
 
     public void init(int num[]) {
@@ -58,8 +67,23 @@ public class BrailleKeyboard {
     }
 
     public void changeMode() {
-        modeFlag ++;
+        if (isModeLock != 0) return ;
+        modeFlag++;
         modeFlag %= 4;
+        if (modeFlag == 0) bMode.setText("Kor");
+        else if (modeFlag == 1) bMode.setText("Eng(s)");
+        else if (modeFlag == 2) bMode.setText("Eng(u)");
+        else if (modeFlag == 3) bMode.setText("num");
+    }
+
+    public void changeMode(int mode) {
+        if (0 <= mode && mode <= 3) {
+            modeFlag = mode;
+            if (modeFlag == 0) bMode.setText("Kor");
+            else if (modeFlag == 1) bMode.setText("Eng(s)");
+            else if (modeFlag == 2) bMode.setText("Eng(u)");
+            else if (modeFlag == 3) bMode.setText("num");
+        }
     }
 
     /**
@@ -119,7 +143,6 @@ public class BrailleKeyboard {
             if (token != null) {
                 if (modeFlag == 0) {
                     value = kt.korSplitData(token);
-
                     if (value != ' ') {
                         resultString += String.valueOf(value);
                     }
@@ -136,6 +159,38 @@ public class BrailleKeyboard {
 
         return resultString;
     }
+
+    /**
+     *  Turn off braille keyboard.
+     */
+    public void turnOffBrailleKB() {
+        Constants.KEYBOARD_MODE = Constants.BRAILLE_KEYBOARD_OFF;
+    }
+
+    /**
+     *  Turn on braille keyboard.
+     */
+    public void turnOnBrailleKB() {
+        Constants.KEYBOARD_MODE = Constants.BRAILLE_KEYBOARD_ON;
+        TOffModeLock();
+    }
+
+    /**
+     * Choose lock mode. If the lock mode is enabled, then user cannot change input mode
+     * (such as Kor, Eng or Num)
+     */
+    public void TOnModeLock() {
+        isModeLock = 1;
+    }
+
+    public void TOffModeLock() {
+        isModeLock = 0;
+    }
+
+    public void clearString() {
+        resultString = "";
+    }
+
 }
 
 

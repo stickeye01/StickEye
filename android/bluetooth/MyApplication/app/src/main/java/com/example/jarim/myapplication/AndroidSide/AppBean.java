@@ -3,6 +3,7 @@ package com.example.jarim.myapplication.AndroidSide;
 import android.app.Activity;
 import android.content.Context;
 
+import com.example.jarim.myapplication.BrailleKeyboard.BrailleKeyboard;
 import com.example.jarim.myapplication.TtsService;
 
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ public class AppBean {
     private String name;
     private String intentName;
     private ArrayList<AppBean> subAppList;
+    public BrailleKeyboard bKey;
     public TtsService tts;
     public Context mContext;
     public Activity mActivity;
@@ -23,12 +25,14 @@ public class AppBean {
 
     }
 
-    public AppBean(String _name, String _intentName, TtsService _tts, Context _ctx) {
+    public AppBean(String _name, String _intentName, TtsService _tts, Context _ctx,
+                    BrailleKeyboard _bKey) {
         name = _name;
         intentName = _intentName;
         tts = _tts;
         mContext = _ctx;
         mActivity = (Activity) mContext;
+        bKey = _bKey;
     }
 
     /**

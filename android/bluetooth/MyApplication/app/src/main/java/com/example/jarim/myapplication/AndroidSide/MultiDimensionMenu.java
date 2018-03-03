@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import com.example.jarim.myapplication.BrailleKeyboard.BrailleKeyboard;
 import com.example.jarim.myapplication.Constants;
 import com.example.jarim.myapplication.R;
 import com.example.jarim.myapplication.TtsService;
@@ -25,51 +26,62 @@ public class MultiDimensionMenu implements View.OnClickListener{
     private Context mContext;
     private Activity mActivity;
     private AppBean selectedApp;
-    public static int MENU_LEVEL = Constants.MAIN_MENU_MODE;
     private Button clickButton;
+    private BrailleKeyboard bKey;
 
-    public MultiDimensionMenu(TtsService _tts, Context _ctxt) {
+    public MultiDimensionMenu(TtsService _tts, Context _ctxt, BrailleKeyboard _bKey) {
         tts = _tts;
         mContext = _ctxt;
         mActivity = (Activity) mContext;
-        initialize();
+        bKey = _bKey;
+        initializeMenu();
     }
 
-    private void initialize() {
+    private void initializeMenu() {
         clickButton = mActivity.findViewById(R.id.click2);
         clickButton.setOnClickListener(this);
         vertical_index = 0;
         horizontal_index = 0;
         appList = new ArrayList<AppBean>();
         AppBean callApp = new AppBean("전화관련",
-                "", tts, mContext);
+                "", tts, mContext, bKey);
         PhoneCallBean callDialApp = new PhoneCallBean("전화걸기",
-                "", tts, mContext);
+                "", tts, mContext, bKey);
         PhoneRegisterBean callRegApp = new PhoneRegisterBean("전화번호등록",
-                "", tts, mContext);
+                "", tts, mContext, bKey);
         PhoneBookBean phoneBook = new PhoneBookBean("전화번호부",
-                "", tts, mContext);
+                "", tts, mContext, bKey);
         callApp.addSubItem(callDialApp);
         callApp.addSubItem(callRegApp);
         callApp.addSubItem(phoneBook);
         appList.add(callApp);
-        AppBean msgApp = new AppBean("메세지", "", tts, mContext);
+        AppBean msgApp = new AppBean("메세지", "", tts, mContext, bKey);
         MessageBookBean msgReadApp = new MessageBookBean("메시지 읽기",
-                                                "", tts, mContext);
+                                                "", tts, mContext, bKey);
         MessageSendBean msgWriteApp = new MessageSendBean("메시지 쓰기",
-                                                "", tts, mContext);
+                                                "", tts, mContext, bKey);
         msgApp.addSubItem(msgReadApp);
         msgApp.addSubItem(msgWriteApp);
         appList.add(msgApp);
-        MP3Bean mp3App = new MP3Bean("MP3", "", tts, mContext);
+        MP3Bean mp3App = new MP3Bean("MP3", "", tts, mContext, bKey);
         appList.add(mp3App);
+    }
+
+    private void initializeSetting() {
+        bKey.turnOffBrailleKB();
+        if (Constants.MENU_LEVEL == Constants.BRAILLE_CLICK_MODE)
+            Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
+        if (Constants.MENU_LEVEL == Constants.MAIN_MENU_MODE)
+            selectedApp = null;
     }
 
     /**
      *  move left.
      */
     public void left() {
-        if (MENU_LEVEL == Constants.MAIN_MENU_MODE) {
+        initializeSetting();
+        if (Constants.MENU_LEVEL == Constants.MAIN_MENU_MODE ||
+                Constants.MENU_LEVEL == Constants.BRAILLE_CLICK_MODE) {
             Log.e("LHC", "LEFT");
             horizontal_index--;
             if (horizontal_index < 0)
@@ -84,7 +96,9 @@ public class MultiDimensionMenu implements View.OnClickListener{
      *  move right.
      */
     public void right() {
-        if (MENU_LEVEL == Constants.MAIN_MENU_MODE) {
+        initializeSetting();
+        if (Constants.MENU_LEVEL == Constants.MAIN_MENU_MODE ||
+                Constants.MENU_LEVEL == Constants.BRAILLE_CLICK_MODE) {
             Log.e("LHC", "RIGHT");
             horizontal_index++;
             if (horizontal_index > appList.size() - 1)
@@ -99,7 +113,9 @@ public class MultiDimensionMenu implements View.OnClickListener{
      *  move top.
      */
     public void top() {
-        if (MENU_LEVEL == Constants.MAIN_MENU_MODE) {
+        initializeSetting();
+        if (Constants.MENU_LEVEL == Constants.MAIN_MENU_MODE ||
+                Constants.MENU_LEVEL == Constants.BRAILLE_CLICK_MODE) {
             Log.e("LHC", "TOP");
             curItem = appList.get(horizontal_index);
             if (curItem == null) {
@@ -123,7 +139,9 @@ public class MultiDimensionMenu implements View.OnClickListener{
      *  move down.
      */
     public void down() {
-        if (MENU_LEVEL == Constants.MAIN_MENU_MODE) {
+        initializeSetting();
+        if (Constants.MENU_LEVEL == Constants.MAIN_MENU_MODE ||
+                Constants.MENU_LEVEL == Constants.BRAILLE_CLICK_MODE) {
             Log.e("LHC", "DOWN");
             curItem = appList.get(horizontal_index);
             if (curItem == null) {
@@ -148,7 +166,8 @@ public class MultiDimensionMenu implements View.OnClickListener{
      *  there are two modes: 1) app starts, 2) app input.
      */
     public void click() {
-        if (MENU_LEVEL == Constants.MAIN_MENU_MODE) {
+        // Main menu mode.
+        if (Constants.MENU_LEVEL == Constants.MAIN_MENU_MODE) {
             selectedApp = appList.get(horizontal_index);
             if (selectedApp == null) return;
             ArrayList subItems = selectedApp.getSubItem();
@@ -160,6 +179,7 @@ public class MultiDimensionMenu implements View.OnClickListener{
                 // if there is no subitem, but it can start itself.
                 selectedApp.start(null);
             }
+        // Sub menu mode.
         } else if (selectedApp != null){
             selectedApp.click();
         }

@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 
+import com.example.jarim.myapplication.BrailleKeyboard.BrailleKeyboard;
 import com.example.jarim.myapplication.Constants;
 import com.example.jarim.myapplication.R;
 import com.example.jarim.myapplication.TtsService;
@@ -29,15 +30,21 @@ public class MessageSendBean extends AppBean {
     private String phone_num;
     private String msg;
 
-    public MessageSendBean(String _name, String _intentName, TtsService _tts, Context _ctx) {
-        super(_name, _intentName, _tts, _ctx);
+    public MessageSendBean(String _name, String _intentName, TtsService _tts, Context _ctx,
+                           BrailleKeyboard _bKey) {
+        super(_name, _intentName, _tts, _ctx, _bKey);
         input_etext = (EditText) mActivity.findViewById(R.id.test_input);
     }
 
 
     @Override
     public boolean start(Object o) {
+        Constants.MENU_LEVEL = Constants.BRAILLE_CLICK_MODE;
         checkPermission();
+        bKey.turnOnBrailleKB();
+        bKey.changeMode(Constants.B_NUM_MODE);
+        bKey.TOnModeLock();
+        bKey.clearString();
         tts.sspeak("문자 메시지 보내기입니다. 전화번호를 입력하세요.");
         input_etext.setText("");
         input_etext.requestFocus();
@@ -45,24 +52,24 @@ public class MessageSendBean extends AppBean {
     }
 
     @Override
-    public void clicked(Object _v) {
-        View v = (View) _v;
-        if (v.getId() == R.id.click2) {
-            if (no_degree == Constants.PHONE_NUM_WRITE_STAGE) {
-                phone_num = input_etext.getText().toString();
-                tts.ispeak("문자 메시지를 입력하세요.");
-                input_etext.setText("");
-                input_etext.requestFocus();
-                no_degree = Constants.MESSAGE_WRITE_STAGE;
-            } else if (no_degree == Constants.MESSAGE_WRITE_STAGE) {
-                msg = input_etext.getText().toString();
-                tts.ispeak("전송하시려면 클릭버튼을 다시 누르세요.");
-                no_degree = Constants.SEND_MESSAGE_STAGE;
-            } else if (no_degree == Constants.SEND_MESSAGE_STAGE) {
-                sendSMS(phone_num, msg);
-                tts.ispeak("메시지가 전송되었습니다.");
-                no_degree = Constants.PHONE_NUM_WRITE_STAGE;
-            }
+    public void click() {
+        if (no_degree == Constants.PHONE_NUM_WRITE_STAGE) {
+            phone_num = input_etext.getText().toString();
+            tts.ispeak("문자 메시지를 입력하세요.");
+            input_etext.setText("");
+            input_etext.requestFocus();
+            bKey.TOffModeLock();
+            bKey.clearString();
+            no_degree = Constants.MESSAGE_WRITE_STAGE;
+        } else if (no_degree == Constants.MESSAGE_WRITE_STAGE) {
+            msg = input_etext.getText().toString();
+            tts.ispeak("전송하시려면 클릭버튼을 다시 누르세요.");
+            no_degree = Constants.SEND_MESSAGE_STAGE;
+        } else if (no_degree == Constants.SEND_MESSAGE_STAGE) {
+            sendSMS(phone_num, msg);
+            tts.ispeak("메시지가 전송되었습니다.");
+            no_degree = Constants.PHONE_NUM_WRITE_STAGE;
+            Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
         }
     }
 

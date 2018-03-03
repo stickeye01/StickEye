@@ -13,6 +13,7 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.EditText;
 
+import com.example.jarim.myapplication.BrailleKeyboard.BrailleKeyboard;
 import com.example.jarim.myapplication.Constants;
 import com.example.jarim.myapplication.R;
 import com.example.jarim.myapplication.TtsService;
@@ -30,8 +31,9 @@ public class MessageBookBean extends AppBean {
     private int horizontal_index = 0;
     private int MSG_SIZE = 10;
 
-    public MessageBookBean(String _name, String _intentName, TtsService _tts, Context _ctx) {
-        super(_name, _intentName, _tts, _ctx);
+    public MessageBookBean(String _name, String _intentName, TtsService _tts, Context _ctx,
+                           BrailleKeyboard _bKey) {
+        super(_name, _intentName, _tts, _ctx, _bKey);
         input_etext = (EditText) mActivity.findViewById(R.id.test_input);
         msgLists = new ArrayList<SMSMessage>();
     }
@@ -40,9 +42,7 @@ public class MessageBookBean extends AppBean {
     @Override
     public boolean start(Object o) {
         tts.sspeak("문자 메시지 읽기입니다. 조이스틱을 좌우로 움직여주세요.");
-        MultiDimensionMenu.MENU_LEVEL = Constants.SUB_MENU_MODE;
-        input_etext.setText("");
-        input_etext.requestFocus();
+        Constants.MENU_LEVEL = Constants.SUB_MENU_MODE;
         return true;
     }
 
@@ -105,7 +105,7 @@ public class MessageBookBean extends AppBean {
         readSMSMessage();
         if (horizontal_index == MSG_SIZE) {
             tts.ispeak("메인 메뉴로 돌아갑니다.");
-            MultiDimensionMenu.MENU_LEVEL = Constants.MAIN_MENU_MODE;
+            Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
         } else {
             tts.ispeak(Integer.toString(horizontal_index)+"번째 메시지를 읽습니다.");
             readCurMessage();
