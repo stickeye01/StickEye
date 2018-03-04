@@ -4,10 +4,10 @@
 #define BUFF_SIZE 256
 #define NUM_ULTRA 3
 
-#define RIGHT 60
-#define LEFT 120
+#define RIGHT 50
+#define LEFT 130
 #define CENTER 90
-#define LIMIT 58
+#define LIMIT 100.0
 /*
  * Button 
  * const int buttonPin = 2;
@@ -45,6 +45,10 @@ FALLING for when the pin goes from high to low.
  HIGH to trigger the interrupt whenever the pin is high.
  */
 volatile byte state = HIGH; //전역 변수
+/*=======================================
+ * vibration sensor
+ ========================================*/
+int const vibrationPin =A0; //use analog pin
 
 /*=======================================
  * ultra sensor
@@ -65,17 +69,19 @@ Servo servo;
 int angle = 0; // servo position in degrees to 0(0.5ms purse) from 180(2.5ms purse)
 
 /*
- * timer setting
+ * timer
  */
 unsigned long preTime = 0;
 unsigned long  currentTime = 0;
-unsigned int duration = 3000;
+unsigned int duration = 2000;
 
 
 void setup() {
   Serial.begin(9600);
   BTSerial.begin(9600);
   
+  pinMode(vibrationPin, OUTPUT); 
+
   /*----------------------------------------
    * servo motor
    -----------------------------------------*/
@@ -103,6 +109,7 @@ void setup() {
 
 
 void loop() {
+
   myTimer();
 }
 /*
@@ -129,31 +136,36 @@ void clickButton(){
   changeServoMotorAngle('c');
 }
 
+bool isBlocked(int i){
+  bool val = false;
+  float mAvg = 0.0;
+  for(int j = 0 ; j < 5  ; j++ ){
+     mAvg += distance[i][j];
+     delay(1);
+  }
+  avg[i] = mAvg/5;
+  delay(3);
+  if(avg[i] <LIMIT)
+     return true;
+   else
+    return false;
+}
+
 void turnHandle(){
-    bool isBlocked[NUM_ULTRA] ={false};
-    for(int i = 0 ; i<NUM_ULTRA ; i++ ){
-      int avg = 0;
-      int numberOfZero = 0;
-      for(int j = 0; j < 5 ; j++){
-          if(distance[i][j]!=0)
-            avg += distance[i][j];
-          else
-            numberOfZero++;
-       }
-       avg /= (5-numberOfZero);
-      if(avg <LIMIT){
-        isBlocked[i] = true;
-      }
-    }
-    if(isBlocked[2]){ //center에 방해물이 있으면
-    if(isBlocked[0] && !isBlocked[1]){ //right쪽에 방해물이 있으면
+  
+    if(isBlocked(2)){ //center에 방해물이 있으면
+      bool mIsBlocked[2];
+      mIsBlocked[0] = isBlocked(0);
+      mIsBlocked[1] = isBlocked(1);
+      
+    if( mIsBlocked[0] && ! mIsBlocked[1] ){ //right쪽에 방해물이 있으면
       if(angle != LEFT){
         Serial.println(" ........오른쪽 막힘.. 왼쪽 이동");
         changeServoMotorAngle('l');
       }else{
         Serial.println(" ........오른쪽 막힘..이미 왼쪽 방향");
       }
-    }else if(isBlocked[1] && !isBlocked[0]){
+    }else if( mIsBlocked[1]  && !mIsBlocked[0]){
       if(angle != RIGHT){
           Serial.println(" ........왼쪽 막힘.. 오른쪽 이동");
           changeServoMotorAngle('r');
@@ -161,13 +173,23 @@ void turnHandle(){
         Serial.println(" ........오른쪽 막힘..이미 오른쪽 방향");
       }
      }
-    else if(isBlocked[0] && isBlocked[1]){ // right , left 둘다 방해물이 있으면
+    else if( mIsBlocked[0] &&  mIsBlocked[1] ){ // right , left 둘다 방해물이 있으면
       Serial.println(" ........막힘 진동");
+       digitalWrite(vibrationPin,HIGH);
+       delay(1000);
+       digitalWrite(vibrationPin,LOW);
+       delay(500);
     }
-     else if(!isBlocked[0] &&!isBlocked[1]){ //  right , left 둘다 방해물이 없으면
-      if(angle != RIGHT && angle != LEFT){
-        Serial.println(" ........둘다 괜찮음... 오른쪽 이동");
-        changeServoMotorAngle('r');
+     else if(! mIsBlocked[0] &&! mIsBlocked[1]){ //  right , left 둘다 방해물이 없으면
+      if(angle != RIGHT && angle != LEFT){  
+        if(avg[0] > avg[1]) {
+          changeServoMotorAngle('r');
+          Serial.println(" ........둘다 괜찮음... 오른쪽 이동");
+        }
+         else{
+          changeServoMotorAngle('l');
+           Serial.println(" ........둘다 괜찮음... 왼쪽 이동");
+         }
       }else{
          Serial.println(" ........둘다 괜찮음... 이미 방향 바꿈");
       }
@@ -176,6 +198,8 @@ void turnHandle(){
     if(angle != CENTER){
       Serial.println("...직진");
       changeServoMotorAngle('c');
+    }else{
+       Serial.println("...직진하고 있는 중");
     }
   }
 }
