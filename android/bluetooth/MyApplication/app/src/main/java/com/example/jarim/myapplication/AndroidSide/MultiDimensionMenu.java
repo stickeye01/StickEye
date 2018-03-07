@@ -65,6 +65,9 @@ public class MultiDimensionMenu implements View.OnClickListener{
         appList.add(msgApp);
         MP3Bean mp3App = new MP3Bean("MP3", "", tts, mContext, bKey);
         appList.add(mp3App);
+        NavigationBean naviApp = new NavigationBean("네비게이션", "",
+                                    tts, mContext, bKey);
+        appList.add(naviApp);
     }
 
     private void initializeSetting() {
