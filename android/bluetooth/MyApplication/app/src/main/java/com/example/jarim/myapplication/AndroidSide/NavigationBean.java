@@ -2,14 +2,17 @@ package com.example.jarim.myapplication.AndroidSide;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -34,6 +37,15 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
     private String provider = null;
     private boolean isGPSEnabled;
     private boolean isNetworkEnabled;
+    private ArrayList<String> subMenus;
+
+    private int horizontal_index = 0;
+
+    private final int CURRENT_LOCATION = 0;
+    private final int REGISTER_LOCATION = 1;
+    private final int REMOVE_LOCATION = 2;
+    private final int CLOSE_LANDMARK = 3;
+    private final int GO_TO_MAINMENU = 4;
 
     public NavigationBean(String _name, String _intentName, TtsService _tts, Context _ctx,
                           BrailleKeyboard _bKey) {
@@ -67,6 +79,12 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
                 0, 0, this);
         lm.requestLocationUpdates(LocationManager.GPS_PROVIDER,
                 0, 0, this);
+        subMenus = new ArrayList<String>();
+        subMenus.add("현재 위치");
+        subMenus.add("현재 위치 등록");
+        subMenus.add("가까운 랜드마크 삭제");
+        subMenus.add("가까운 랜드마크");
+        subMenus.add("메인 메뉴로 돌아가기");
     }
 
 
@@ -142,26 +160,51 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
 
     @Override
     public void click() {
-        String locationProvider = LocationManager.NETWORK_PROVIDER;
-        Log.e("LHC", "clicked!");
-        if (ActivityCompat.checkSelfPermission(mContext,
-                Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.
+        if (horizontal_index == CURRENT_LOCATION) {
+            String locationProvider = LocationManager.NETWORK_PROVIDER;
+            Log.e("LHC", "clicked!");
+            if (ActivityCompat.checkSelfPermission(mContext,
+                    Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.
                     checkSelfPermission(mContext,
-                    Manifest.permission.ACCESS_COARSE_LOCATION)
+                            Manifest.permission.ACCESS_COARSE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
 
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
+            lm.removeUpdates(this);
+            lm.requestLocationUpdates(locationProvider, 0, 0, this);
+        } else if (horizontal_index == REGISTER_LOCATION) {
+            tts.sspeak("현재 위치를 랜드마크로 등록합니다.");
+
+        } else if (horizontal_index == REMOVE_LOCATION) {
+            tts.sspeak("가까운 랜드마크를 제거합니다.");
+        } else if (horizontal_index == CLOSE_LANDMARK) {
+            tts.sspeak("가까운 랜드마크까지의 방향과 거리를 안내합니다.");
+        } else if (horizontal_index == GO_TO_MAINMENU) {
+            tts.sspeak("메인 메뉴로 돌아갑니다.");
+            Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
         }
-        lm.removeUpdates(this);
-        lm.requestLocationUpdates(locationProvider, 0, 0, this);
+    }
+
+
+    @Override
+    public void left() {
+        horizontal_index --;
+        if (horizontal_index < 0) horizontal_index = subMenus.size() - 1;
+    }
+
+    @Override
+    public void right() {
+        horizontal_index ++;
+        if (horizontal_index >= subMenus.size()) horizontal_index = 0;
     }
 }

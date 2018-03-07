@@ -221,31 +221,30 @@ void setJoyStickDirection(int _top_m, int _bottom_m, int _left_m, int _right_m) 
  */
 void checkTouchPad() {
   uint16_t key = ttp229.ReadKey16(); // Blocking
-  int i = key-8;
   if (key) {
-    Serial.println(i);
+    Serial.println(key);
     String dir;
-    if (i == 3) { // 0
+    if (key == 3) { // 0
       dir = "\rb0\n";
-    } else if (i == 2) { // 1
+    } else if (key == 2) { // 1
       dir = "\rb1\n"; 
-    } else if (i == 1) { // 2
+    } else if (key == 1) { // 2
       dir = "\rb2\n"; 
-    } else if (i == 7) { // 3
+    } else if (key == 7) { // 3
       dir = "\rb3\n"; 
-    } else if (i == 6) { // 4
+    } else if (key == 6) { // 4
       dir = "\rb4\n"; 
-    } else if (i == 5) { // 5
+    } else if (key == 5) { // 5
       dir = "\rb5\n"; 
-    } else if (i == 9) { // remove
+    } else if (key == 9) { // remove
       dir = "\rbr\n"; 
-    } else if (i == 4) { // mode
+    } else if (key == 4) { // mode
       dir = "\rbm\n"; 
-    } else if (i == 8) { // complete
+    } else if (key == 8) { // complete
       dir = "\rbc\n"; 
-    } else if (i == 7) { // dobule
+    } else if (key == 7) { // dobule
       dir = "\rbd\n";
-    } else if (i == 11) { // remove all
+    } else if (key == 11) { // remove all
       dir = "\rbra\n"; 
     }
    
