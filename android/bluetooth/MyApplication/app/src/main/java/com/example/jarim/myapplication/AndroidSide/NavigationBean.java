@@ -82,6 +82,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
         double lat = location.getLatitude();
         double lng = location.getLongitude();
         Log.e("LHC", "Address" + getAddress(lat, lng));
+        tts.sspeak("현재 위치는 "+ getAddress(lat, lng)+ " 입니다.");
         lm.removeUpdates(this);
     }
 
@@ -140,9 +141,9 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
     }
 
     @Override
-    public void clicked(Object o) {
+    public void click() {
         String locationProvider = LocationManager.NETWORK_PROVIDER;
-
+        Log.e("LHC", "clicked!");
         if (ActivityCompat.checkSelfPermission(mContext,
                 Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED
