@@ -7,18 +7,14 @@ import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
-import android.net.Uri;
-import android.os.CountDownTimer;
 import android.support.v4.app.ActivityCompat;
 import android.os.Bundle;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -28,10 +24,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.jarim.myapplication.AndroidSide.MultiDimensionMenu;
+import com.example.jarim.myapplication.Bluetooth.BluetoothDBHandler;
+import com.example.jarim.myapplication.Bluetooth.BluetoothService;
+import com.example.jarim.myapplication.USBConnector.RegisterDialog;
 import com.example.jarim.myapplication.USBConnector.SerialConnector;
 import com.example.jarim.myapplication.BrailleKeyboard.BrailleKeyboard;
-
-import java.io.UnsupportedEncodingException;
 
 public class MainActivity extends Activity implements OnClickListener {
     // Debugging
@@ -67,7 +64,7 @@ public class MainActivity extends Activity implements OnClickListener {
     TtsService tts = null;
 
     // Database
-    private DBHandler mDBOpenHandler;
+    private BluetoothDBHandler mDBOpenHandler;
 
     // Register dialog
     private RegisterDialog mRegDialog;
@@ -255,7 +252,7 @@ public class MainActivity extends Activity implements OnClickListener {
             btService = new BluetoothService(this, btHandler);
         }
 
-        mDBOpenHandler = new DBHandler(this);
+        mDBOpenHandler = new BluetoothDBHandler(this);
         //
         //PackageManager pkgMan = getPackageManager();
         //if (pkgMan.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
@@ -349,9 +346,6 @@ public class MainActivity extends Activity implements OnClickListener {
         Log.d(TAG, "MainActivity: onActivityResult(" + resultCode + ")");
         switch (requestCode) {
             case REQUEST_CONNECT_DEVICE:
-                if (resultCode == Activity.RESULT_OK) {
-                    btService.getDeviceInfo(data);
-                }
                 break;
             case REQUEST_ENABLE_BT:
                 break;

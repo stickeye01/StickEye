@@ -1,4 +1,4 @@
-package com.example.jarim.myapplication;
+package com.example.jarim.myapplication.USBConnector;
 
 import android.app.Dialog;
 import android.content.Context;
@@ -15,6 +15,8 @@ import android.view.Window;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
+
+import com.example.jarim.myapplication.R;
 
 /**
  * Created by lhc on 2018-01-05.

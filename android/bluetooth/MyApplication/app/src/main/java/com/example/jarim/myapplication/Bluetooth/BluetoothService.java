@@ -1,4 +1,4 @@
-package com.example.jarim.myapplication;
+package com.example.jarim.myapplication.Bluetooth;
 
 /**
  * Created by Jarim on 2017-12-05.
@@ -10,21 +10,16 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.UUID;
 import android.app.Activity;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
-import android.os.SystemClock;
 import android.util.Log;
 
-import static java.sql.Types.NULL;
+import com.example.jarim.myapplication.Constants;
 
 public class BluetoothService {
     // Message types that are sent by the BluetoothChatService handler
@@ -156,16 +151,6 @@ public class BluetoothService {
         //setMACID("20:16:05:19:90:62");
         setMACID(Constants.macAddr);
         getDeviceInfo(getMACID());
-    }
-
-    /*
-     * Get the device's MAC address and try to connect it.
-     */
-    public void getDeviceInfo(Intent data) {
-        String address = data.getExtras().getString(
-                DeviceListActivity.EXTRA_DEVICE_ADDRESS);
-        BluetoothDevice device = btAdapter.getRemoteDevice(address);
-        connect(device);
     }
 
     /*
