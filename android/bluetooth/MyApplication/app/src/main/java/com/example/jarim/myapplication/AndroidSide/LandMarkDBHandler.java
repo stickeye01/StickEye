@@ -94,6 +94,12 @@ public class LandMarkDBHandler {
             sqLiteDatabase.delete(CreateDB._TABLENAME, null, null);
         }
 
+        public void delete(SQLiteDatabase sqLiteDatabase, double lat, double lng) {
+            sqLiteDatabase.delete(CreateDB._TABLENAME,
+                    CreateDB.LATITUDE+"=? AND "+CreateDB.LONGITUDE+"=?",
+                            new String[]{Double.toString(lat), Double.toString(lng)});
+        }
+
         /*
          * select all data from db (for test)
          */
@@ -145,6 +151,13 @@ public class LandMarkDBHandler {
     public LandMarkDBHandler deleteAll() {
         mDB = mDBController.getWritableDatabase();
         mDBController.deleteAll(mDB);
+        mDB.close();
+        return this;
+    }
+
+    public LandMarkDBHandler delete(double lat, double lng) {
+        mDB = mDBController.getWritableDatabase();
+        mDBController.delete(mDB, lat, lng);
         mDB.close();
         return this;
     }
