@@ -40,25 +40,31 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
     private ArrayList<String> subMenus;
     private ArrayList<LandMark> landmarkList;
 
-    private int horizontal_index = 0;
-    private int register_landmark = 0;
-    private int check_dist_dir_land= 0;
-
     private final int CURRENT_LOCATION = 0;
     private final int REGISTER_LOCATION = 1;
     private final int CLOSE_LANDMARK = 2;
     private final int REMOVE_LOCATION = 3;
     private final int GO_TO_MAINMENU = 4;
+    private final int NORMAL_MODE = 5;
+    private final int LM_REG_MODE = 6;
+
+    private int horizontal_index = 0;
+    private int register_landmark = 0;
+    private int check_dist_dir_land= 0;
+    private int no_degree = NORMAL_MODE;
 
     private LandMarkDBHandler landMarkDBHandler;
     private LandMark shortestLandMark = null;
     private LandMark currentLandMark = null;
 
+    private EditText input_etext;
+    private String lm_name = "";
+
     public NavigationBean(String _name, String _intentName, TtsService _tts, Context _ctx,
                           BrailleKeyboard _bKey) {
         super(_name, _intentName, _tts, _ctx, _bKey);
+        input_etext = mActivity.findViewById(R.id.test_input);
     }
-
 
     @Override
     public boolean start(Object o) {
@@ -155,6 +161,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
         printLandMarkLists();
 
         if (register_landmark == 1) {
+            currentLandMark.setName(lm_name);
             landMarkDBHandler.insert(currentLandMark);
             register_landmark = 0;
         }
@@ -260,18 +267,44 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
             lm.removeUpdates(this);
             lm.requestLocationUpdates(locationProvider, 0, 0, this);
         } else if (horizontal_index == REGISTER_LOCATION) {
-            tts.sspeak("현재 위치를 랜드마크로 등록합니다.");
-            // 이 경우에는 랜드마크 등록 기능을 선택한 후에 주소를
-            // 검색하였을 경우이다. DB와 list를 갱신 후에 register_landmark를 원래 값으로 돌린다.
-            // 따라서 이 이후에는 DB에 추가되지 않는다.
-            if (currentLandMark != null) {
-                landMarkDBHandler.insert(currentLandMark); // add data into DB
-            } else {    // 미리 저장된 값이 없을 경우 이벤트 강제 호출
-                register_landmark = 1;
+            if (no_degree == NORMAL_MODE) {
+                tts.sspeak("현재 위치를 랜드마크로 등록합니다.");
+                tts.sspeak("등록할 이름을 작성하고 다시 클릭하세요.");
+
+                // Turn on the braille keyboard
+                input_etext.setText("");
+                input_etext.requestFocus();
+                bKey.clearString();
+                bKey.turnOnBrailleKB();
+                // Next level
+                no_degree = LM_REG_MODE;
+            } else if (no_degree == LM_REG_MODE) {
+                // Turn off the keyboard
+                lm_name = input_etext.getText().toString();
+                input_etext.setText("");
+                bKey.clearString();
+
+                // 이 경우에는 랜드마크 등록 기능을 선택한 후에 주소를
+                // 검색하였을 경우이다. DB와 list를 갱신 후에 register_landmark를 원래 값으로 돌린다.
+                // 따라서 이 이후에는 DB에 추가되지 않는다.
+                if (currentLandMark != null) {
+                    currentLandMark.setName(lm_name);
+                    landMarkDBHandler.insert(currentLandMark); // add data into DB
+                } else {    // 미리 저장된 값이 없을 경우 이벤트 강제 호출
+                    register_landmark = 1;
+                    lm.removeUpdates(this);
+                    lm.requestLocationUpdates(locationProvider, 0, 0, this);
+                }
                 lm.removeUpdates(this);
-                lm.requestLocationUpdates(locationProvider, 0, 0,  this);
+                selectAllLandMarkLists();
+                printLandMarkLists();
+                // return to the level
+                no_degree = NORMAL_MODE;
+                tts.sspeak("랜드마크 "+lm_name+"이 등록되었습니다.");
+                shortestLandMark =
+                        findShortestLandmark(currentLandMark.getLat(),
+                                            currentLandMark.getLng());
             }
-            lm.removeUpdates(this);
         } else if (horizontal_index == REMOVE_LOCATION) {
             tts.ispeak("가까운 랜드마크를 제거합니다.");
             if (shortestLandMark != null) {

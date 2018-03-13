@@ -70,6 +70,7 @@ public class MessageSendBean extends AppBean {
             tts.ispeak("메시지가 전송되었습니다.");
             no_degree = Constants.PHONE_NUM_WRITE_STAGE;
             Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
+            bKey.TOffModeLock();
         }
     }
 
