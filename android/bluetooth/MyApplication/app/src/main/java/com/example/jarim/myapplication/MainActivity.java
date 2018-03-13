@@ -48,10 +48,8 @@ public class MainActivity extends Activity implements OnClickListener {
     // Layout
     private Button btn_connect;
     private Button btn_register;
-    private TextView txt_Result;
     private TextView txt_mac_id;
     private TextView txt_conn_stats;
-    private TextView txt_serv_stats;
     private TextView txt_usb_stats;
 
     // TEST Layout
@@ -105,7 +103,6 @@ public class MainActivity extends Activity implements OnClickListener {
             switch (msg.what) {
                 case BluetoothService.MESSAGE_READ:
                     String command = (String) msg.obj;
-                    txt_Result.setText(command);
                     processData(command);
                     break;
                 case BluetoothService.MESSAGE_STATE_CHANGE:
@@ -117,7 +114,6 @@ public class MainActivity extends Activity implements OnClickListener {
                     txt_mac_id.setText((String) msg.obj);
                     break;
                 case BluetoothService.MESSAGE_SERVER_STATE:
-                    txt_serv_stats.setText((String) msg.obj);
                     break;
             }
         }
@@ -232,10 +228,8 @@ public class MainActivity extends Activity implements OnClickListener {
         // Layout
         btn_connect = (Button) findViewById(R.id.btn_connect);
         btn_register = (Button) findViewById(R.id.btn_register);
-        txt_Result = (TextView) findViewById(R.id.txt_result);
         txt_conn_stats = (TextView) findViewById(R.id.conn_stats);
         txt_mac_id = (TextView) findViewById(R.id.mac_id);
-        txt_serv_stats = (TextView) findViewById(R.id.server_stats);
         txt_usb_stats = (TextView) findViewById(R.id.usb_stat);
         btn_connect.setOnClickListener(this);
         btn_register.setOnClickListener(this);

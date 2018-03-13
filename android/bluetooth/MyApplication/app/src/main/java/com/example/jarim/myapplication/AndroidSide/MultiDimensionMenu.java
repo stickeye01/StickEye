@@ -26,7 +26,6 @@ public class MultiDimensionMenu implements View.OnClickListener{
     private Context mContext;
     private Activity mActivity;
     private AppBean selectedApp;
-    private Button clickButton;
     private BrailleKeyboard bKey;
 
     public MultiDimensionMenu(TtsService _tts, Context _ctxt, BrailleKeyboard _bKey) {
@@ -38,8 +37,6 @@ public class MultiDimensionMenu implements View.OnClickListener{
     }
 
     private void initializeMenu() {
-        clickButton = mActivity.findViewById(R.id.click2);
-        clickButton.setOnClickListener(this);
         vertical_index = 0;
         horizontal_index = 0;
         appList = new ArrayList<AppBean>();
