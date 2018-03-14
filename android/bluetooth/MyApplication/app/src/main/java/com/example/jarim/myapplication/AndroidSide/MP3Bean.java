@@ -52,10 +52,12 @@ public class MP3Bean extends AppBean {
     public void left() {
         horizontal_index --;
         if (horizontal_index < 0) horizontal_index = list.size();
-        if (horizontal_index == list.size())
+        if (horizontal_index == list.size()) {
             tts.ispeak("메인 메뉴로 돌아가기");
-        else {
+            menu_txt.setText("메인 메뉴로 돌아가기");
+        } else {
             tts.ispeak(list.get(horizontal_index).getTitle());
+            menu_txt.setText("MP3:"+list.get(horizontal_index).getTitle());
             if (isMusicOn == 1) playMusic(list.get(horizontal_index));
         }
     }
@@ -68,6 +70,7 @@ public class MP3Bean extends AppBean {
         } else {
             if (horizontal_index > list.size()) horizontal_index = 0;
             tts.ispeak(list.get(horizontal_index).getTitle());
+            menu_txt.setText("MP3:"+list.get(horizontal_index).getTitle());
             if (isMusicOn == 1) playMusic(list.get(horizontal_index));
         }
     }

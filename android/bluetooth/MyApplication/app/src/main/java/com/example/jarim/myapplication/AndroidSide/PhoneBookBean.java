@@ -202,6 +202,7 @@ public class PhoneBookBean extends AppBean {
                 vertical_index = 0;
             Log.e("LHC","VERTICAL :"+Integer.toString(vertical_index)+", HORIZONTAL:"+Integer.toString(horizontal_index));
             tts.ispeak(charPerConcats[horizontal_index].get(vertical_index).getName());
+            menu_txt.setText("전화번호부:"+charPerConcats[horizontal_index].get(vertical_index).getName());
         }
     }
 
@@ -212,6 +213,7 @@ public class PhoneBookBean extends AppBean {
             if (vertical_index < 0)
                 vertical_index = charPerConcats[horizontal_index].size()-1;
             tts.ispeak(charPerConcats[horizontal_index].get(vertical_index).getName());
+            menu_txt.setText("전화번호부:"+charPerConcats[horizontal_index].get(vertical_index).getName());
         }
     }
 
@@ -221,6 +223,11 @@ public class PhoneBookBean extends AppBean {
         vertical_index = -1;
         if (horizontal_index < 0) horizontal_index = subMenu.length - 1;
         tts.ispeak(subMenu[horizontal_index]);
+        if (horizontal_index != 15)
+            menu_txt.setText("전화번호부:"+
+                    subMenu[horizontal_index]);
+        else
+            menu_txt.setText("메인 메뉴로 돌아가기");
     }
 
     @Override
@@ -229,6 +236,11 @@ public class PhoneBookBean extends AppBean {
         vertical_index = -1;
         if (horizontal_index >= subMenu.length) horizontal_index = 0;
         tts.ispeak(subMenu[horizontal_index]);
+        if (horizontal_index != 15)
+            menu_txt.setText("전화번호부:"+
+                    subMenu[horizontal_index]);
+        else
+            menu_txt.setText("메인 메뉴로 돌아가기");
     }
 
     @Override

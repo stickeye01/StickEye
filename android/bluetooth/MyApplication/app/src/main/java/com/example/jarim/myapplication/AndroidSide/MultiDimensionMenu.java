@@ -5,6 +5,7 @@ import android.content.Context;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
 import com.example.jarim.myapplication.BrailleKeyboard.BrailleKeyboard;
 import com.example.jarim.myapplication.Constants;
@@ -28,12 +29,15 @@ public class MultiDimensionMenu implements View.OnClickListener{
     private AppBean selectedApp;
     private BrailleKeyboard bKey;
 
+    private TextView menu_txt;
+
     public MultiDimensionMenu(TtsService _tts, Context _ctxt, BrailleKeyboard _bKey) {
         tts = _tts;
         mContext = _ctxt;
         mActivity = (Activity) mContext;
         bKey = _bKey;
         initializeMenu();
+        menu_txt = mActivity.findViewById(R.id.md_menu);
     }
 
     private void initializeMenu() {
@@ -87,6 +91,7 @@ public class MultiDimensionMenu implements View.OnClickListener{
             if (horizontal_index < 0)
                 horizontal_index = appList.size() - 1;
             tts.ispeak(appList.get(horizontal_index).getName());
+            menu_txt.setText(appList.get(horizontal_index).getName());
         } else if (selectedApp != null){
             selectedApp.left();
         }
@@ -104,6 +109,7 @@ public class MultiDimensionMenu implements View.OnClickListener{
             if (horizontal_index > appList.size() - 1)
                 horizontal_index = 0;
             tts.ispeak(appList.get(horizontal_index).getName());
+            menu_txt.setText(appList.get(horizontal_index).getName());
         } else if (selectedApp != null){
             selectedApp.right();
         }
@@ -130,6 +136,7 @@ public class MultiDimensionMenu implements View.OnClickListener{
                     vertical_index < subItems.size())
                 curItem = subItems.get(vertical_index);
             tts.ispeak(curItem.getName());
+            menu_txt.setText(curItem.getName());
         } else if (selectedApp != null){
             selectedApp.top();
         }
@@ -156,6 +163,7 @@ public class MultiDimensionMenu implements View.OnClickListener{
                     vertical_index < subItems.size())
                 curItem = subItems.get(vertical_index);
             tts.ispeak(curItem.getName());
+            menu_txt.setText(curItem.getName());
         } else if (selectedApp != null){
             selectedApp.down();
         }

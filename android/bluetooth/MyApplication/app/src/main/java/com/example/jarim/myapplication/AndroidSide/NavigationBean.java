@@ -365,6 +365,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
         horizontal_index --;
         if (horizontal_index < 0) horizontal_index = subMenus.size() - 1;
         tts.ispeak(subMenus.get(horizontal_index));
+        menu_txt.setText("네비게이션:"+subMenus.get(horizontal_index));
     }
 
     @Override
@@ -372,6 +373,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
         horizontal_index ++;
         if (horizontal_index >= subMenus.size()) horizontal_index = 0;
         tts.ispeak(subMenus.get(horizontal_index));
+        menu_txt.setText("네비게이션:"+subMenus.get(horizontal_index));
     }
 
     /**

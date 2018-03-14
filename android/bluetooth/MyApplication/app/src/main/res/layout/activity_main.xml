@@ -18,13 +18,15 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="0.5"
-            android:weightSum = "0.8"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:background="@drawable/border"
+            android:weightSum="0.8">
             <!-- @{ buttons layout -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.2"
+                android:background="@drawable/border"
                 android:orientation="vertical">
 
                 <Button
@@ -39,6 +41,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.2"
+                android:background="@drawable/border"
                 android:orientation="vertical">
 
                 <TextView
@@ -57,6 +60,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.2"
+                android:background="@drawable/border"
                 android:orientation="vertical">
 
                 <TextView
@@ -75,6 +79,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.2"
+                android:background="@drawable/border"
                 android:orientation="vertical">
 
                 <TextView
@@ -101,6 +106,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.2"
+                android:background="@drawable/border"
                 android:orientation="vertical">
 
                 <Button
@@ -115,6 +121,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.2"
+                android:background="@drawable/border"
                 android:orientation="vertical">
 
                 <TextView
@@ -132,6 +139,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.2"
+                android:background="@drawable/border"
                 android:orientation="vertical">
 
                 <TextView
@@ -149,6 +157,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.2"
+                android:background="@drawable/border"
                 android:orientation="vertical">
 
                 <TextView
@@ -177,14 +186,15 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.6"
+            android:layout_weight="0.5"
             android:orientation="horizontal"
             android:weightSum="0.6">
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="0.5"
+                android:layout_weight="0.6"
+                android:background="@drawable/border"
                 android:orientation="vertical"
                 android:weightSum="0.9">
 
@@ -398,26 +408,21 @@
                 <!-- none -->
             </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="0.1"
-                android:orientation="horizontal"></LinearLayout>
-
         </LinearLayout>
         <!-- @} braille keyboard -->
         <!-- @{ input status -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight = "0.4"
-            android:weightSum="1"
-            android:orientation="vertical">
+            android:layout_weight="0.5"
+            android:orientation="vertical"
+            android:weightSum="1">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.3"
+                android:background="@drawable/border"
                 android:orientation="horizontal">
 
                 <EditText
@@ -426,22 +431,28 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:ems="10"
-                    android:inputType="textPersonName"
-                    android:maxLines="5"
+                    android:inputType="textMultiLine"
+                    android:lines="5"
+                    android:minLines="1"
+                    android:maxLines="10"
                     android:text="Typed inputs"
+                    android:scrollbars="vertical"
                     android:textSize="12sp" />
             </LinearLayout>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.2"
-                android:weightSum = "1"
-                android:orientation="horizontal">
+                android:background="@drawable/border"
+                android:orientation="horizontal"
+                android:weightSum="1">
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="0.3"
+                    android:background="@drawable/border"
                     android:orientation="horizontal">
 
                     <TextView
@@ -462,6 +473,7 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="0.7"
+                    android:background="@drawable/border"
                     android:orientation="horizontal">
 
                     <TextView
@@ -476,14 +488,16 @@
                         android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="0.5"
+                android:background="@drawable/border"
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/textView2"
+                    android:id="@+id/md_menu"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:gravity="center"
