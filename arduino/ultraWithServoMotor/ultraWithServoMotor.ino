@@ -21,11 +21,12 @@
 /*========================================================
    ultra sensor and servo motor
   ========================================================*/
-const int limit[] = {60, 100};
-const int ultraMotorPin[] = {A2, A3};
+const int limit[] = {60, 100}; //index 0은 오른쪽 왼쪽 측정, 1은 위아래
+
+const int ultraMotorPin[] = {A2, A3}; 
 const int echoPin[] = {3, 6, 10};
 const int trigPin[] = {5, 9, 11};
-float distance[2] = {0}; //R,L
+float distance[2] = {0}; //장애물과의 거리 index 0은 오른쪽 왼쪽 측정, 1은 위아래
 
 int minAngle = 100;
 int maxAngle = 180;
@@ -37,7 +38,7 @@ Servo servo[2];
 Servo handle;
 
 int handleAngle = CENTER;
-int isBlocked[GAP];
+int isBlocked[GAP]; //index에 해당되는 각도에서 limit 범위 내에 장애물이 측정되면 1 아니면 0
 
 const int handleMotorPin = A0;
 
@@ -48,8 +49,11 @@ unsigned long preTime = 0;
 unsigned long  currentTime = 0;
 unsigned int duration = 3000;
 
-bool mBreak = true;
-
+/* ===========================================================================
+    Section
+     start : 0이 연속적으로 있는 구간의 시작 각도 , length : end-start
+     end : 끝 각도 , direction : end+start/2(중간값)를 통해 판단한 방향
+  ===========================================================================*/
 typedef struct {
   int start;
   int end;
@@ -60,13 +64,14 @@ typedef struct {
 #define SECTION_NUM 6
 Section sections[SECTION_NUM];
 
-/* ---------------------------------------------------
- *  interrupt button
-  -----------------------------------------------------*/
-int click_state;
-const int buttonPin = 9;
-
-
+/*===================================================
+  interrupt button
+  =====================================================*/
+int buttonPin = 2;
+int clickState = 1;
+/*===================================================
+  setup
+  =====================================================*/
 void setup() {
   Serial.begin(9600);
   servo[RL].attach(ultraMotorPin[RL]);
@@ -76,6 +81,9 @@ void setup() {
   handle.attach(handleMotorPin);
   delay(15);
   handle.write(handleAngle);
+  delay(15);
+  pinMode(buttonPin, INPUT);
+  clickState = 1;
   for (int i = 0 ; i < NUM_ULTRA ; i++) {
     pinMode(trigPin[i], OUTPUT);
     pinMode(echoPin[i], INPUT);
@@ -84,30 +92,37 @@ void setup() {
   preTime = millis();
 }
 
-void loop() {
 
-  myTimer();
+void loop() {
+    myTimer();
 }
 
 void myTimer() {
   currentTime = millis();
-  
   if (currentTime - preTime >= duration) {
-    toStickFromBottom = sensingUltra(B);
-    if(toStickFromBottom!= -1){
-      Serial.println(toStickFromBottom);
-      moveUltraMotorUpAndDown();
-      delayMicroseconds(10);
-    }
+    /*
+     * 위 아래 움직일 떄의 시작각도와 끝각도를 구하기 위해 지팡이와 바닥까지의 거리를 측정함
+     * toStickFromBottom = sensingUltra(B);
+     * if (toStickFromBottom != -1) {
+     *   Serial.println(toStickFromBottom);   
+     */
 
+        moveUltraMotorUpAndDown();
+        delayMicroseconds(10);
+      //}
     preTime = currentTime;
   } else {
-
   }
 }
-/*
-   if Sequence's number of 0 is over 30, Store it in the sections array
-*/
+
+//버튼의 상태를 입력으로 받아와 클릭 여부를 판단
+void checkClick(){
+  int currentState = digitalRead(buttonPin);
+  if(currentState != clickState){
+      clickState = currentState;
+       if(clickState == 1) Serial.println("click");
+   }
+}
 
 float startAng(float r, float l, float a)
 {
@@ -131,26 +146,35 @@ float endAng(float r, float l, float a)
   return ang_z + 100;
 }
 
+/*
+ * 모터가 위 아래로 1도 간격으로 움직이며 초음파 센서로 장애물과의 거리 측정
+ */
 void moveUltraMotorUpAndDown()
 {
-  int pos = startAng(180, 52, toStickFromBottom);
-  float pe = endAng(180, 52, toStickFromBottom);
+  int pos = startAng(180, 52, 50);
+  float pe = endAng(180, 52, 50);
   int sum = 0;
   if (pos <= maxAngle || pos >= 0)
   {
-    for (int i = pos; i < endAng(180, 52, toStickFromBottom); i++)
+    for (int i = pos; i < endAng(180, 52, 50); i++)
     {
       servo[UL].write(i);
       sum += sensingUltra(UL);
       delay(10);
     }
     Serial.print("\n");
-    for (int i = endAng(180, 52, toStickFromBottom); i >= pos; i--)
+    for (int i = endAng(180, 52, 50); i >= pos; i--)
     {
       servo[UL].write(i);
       delay(5);
     }
   }
+  /*
+   *   위아래 측정 결과 한개라도 장애물이 있었을 경우 
+   *   좌우로 움직여 장애물이 없는 구간을 찾음.
+   *   만약 모든 각도에서 장애물이 감지되지 않았다면 핸들을 가운데로 움직임
+   */
+
   if (sum > 1)
     findDirection();
   else
@@ -169,6 +193,9 @@ void findDirection() {
     Serial.println("막힘.....");
 }
 
+/*
+ * 좌우로 움직이며 초음파 센서로 장애물 여부를 판단
+ */
 void moveUltraMotorRightAndLeft() {
   int angle = GAP_START;
   int end = GAP_END;
@@ -185,6 +212,9 @@ void moveUltraMotorRightAndLeft() {
   }
 }
 
+/*전역 변수인 isBlock 배열을 확인하여 0이 30개 이상 연속된 구간(장애물이 없는 구간)이 있는지 찾는 함수.
+  장애물이 없는 구간 있을 경우 Section 구조체 배열에 저장한 후 가장 각도가 (끝각도-시작각도) 큰 값의 방향으로 핸들을 움직임
+  사방이 막혔다고 판단하여 진동*/
 int getSection() {
   int s, e, count = 0;
   int pre = 1;
@@ -192,11 +222,12 @@ int getSection() {
   int isAllZero = true;
   for (int i = 0 ; i < GAP_END - GAP_START ; i ++) {
     /*
-       pre right
-       0  -> 1 : Store sequence's value in the sections array  (condition: sequence's length is more than 30)
-       1  -> 0 : Store index of right array in the start variable and the end variable
-       0  -> 0 : Increase count and end value
-       count is sequence length
+      이전의 isBlock 값(pre)과 현재의 isBlock 값을 비교 (isBlock이 0이면 해당 각도의 limit 거리 내에 장애물이 없음. 1이면 있음)
+      다를 경우는 2가지인데
+       0->1 : 0에서 1일 때 개수를 확인하여 30이상이면 Section 구조체를 구조체 배열에 저장하고 개수 변수(count)를 초기화한다.
+       1->0 :1에서 0이면 시작각도 값(start)를 현재의 각도 값으로 저장한다.
+       1 -> 1 : 1에서 1일때 장애물이 있으므로 isAllZero를 false로 저장하여 이후 모든 구간에 장애물이 없는지 판단할때 사용함
+       0 -> 0 : 0에서 0일때 0인 구간이 연속되고 있으므로 끝 각도를 현재의 각도로 설정한다.
     */
     if (pre != isBlocked[i]) {
       if (isBlocked[i] == 0) { // 1->0
@@ -222,7 +253,7 @@ int getSection() {
     }
     pre = isBlocked[i];
   }
-  //when there is no obstacle,isAllZero is true
+  //모든 구간에서 장애물이 없었을 경우(isBlocked의 모든 값이 0인 경우) 방향이 가운데인 Section구조체를 저장함.
   if (isAllZero) {
     sections[sectionIndex].start = 0;
     sections[sectionIndex].direction = CENTER;
@@ -230,6 +261,8 @@ int getSection() {
     sections[sectionIndex].length = e - s;
     sectionIndex++;
   }
+  /*
+   * 구간 확인하기 위한 출력 구문
   if (sectionIndex != 0) {
     Serial.println();
     Serial.print("구간 : length : ");
@@ -244,9 +277,11 @@ int getSection() {
     Serial.println(sections[0].direction);
     delay(1);
   }
+  */
   return sectionIndex;
 }
 
+//구간의 시작 각도와 끝각도를 가지고 방향 결정
 int caculateDirection(int s, int e) {
   int mid = s + e / 2;
   delay(1);
@@ -259,6 +294,7 @@ int caculateDirection(int s, int e) {
   }
 }
 
+//Sectiion이 2개 이상일 경우 선택할 구간을 length로 정한다
 int chooseSection(int size) {
   int s, e;
   int max = 0;
@@ -279,6 +315,7 @@ int chooseSection(int size) {
   }
 }
 
+//현재 핸들의 방향과 변경할 핸들의 방향이 다르면 핸들 방향 변경 
 void changeHadleAngle(int pos) {
   if (handleAngle != pos) {
     handleAngle = pos;
@@ -310,7 +347,7 @@ int sensingUltra(int i) {
     else
       return -1;
   } else {
-    //Ignore odd value
+    //이상한 값이거나 limit보다 장애물과의 거리가 짧으면 1을 리턴한다.
     if (mDistance > 2.0 && mDistance < limit[i]) {
       Serial.print("1");
       Serial.print(mDistance);
