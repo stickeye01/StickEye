@@ -15,31 +15,33 @@
 #define GAP_END 160
 #define NUM_ULTRA 3
 #define RL 0 // Right and left
-#define UL 1 // Uppder and Lower
+#define UB 1 // Uppder and Bottom
 #define B 2 //Bottom
 
 /*========================================================
    ultra sensor and servo motor
   ========================================================*/
-//index 0은 오른쪽 왼쪽 측정, 1은 위아래
+// index 0은 좌/우 측정, 1은 상/하 측정에 사용.
 const int limit[] = {60, 100}; 
 
 const int ultraMotorPin[] = {A2, A3};
 const int echoPin[] = {3, 6, 10};
 const int trigPin[] = {5, 9, 11};
-float distance[2] = {0}; //장애물과의 거리 index 0은 오른쪽 왼쪽 측정, 1은 위아래
+float distance[2] = {0}; //장애물과의 거리: index 0은 좌/우 측정, 1은 상/하
 
+// 회전 가능 각도 (최대/최소)
 int minAngle = 100;
 int maxAngle = 180;
-int toStickFromBottom = 0;
-
-int ultraMotorAngle[] = {20, 0};
+int toStickFromBottom = 0; // 지팡이와 바닥까지의 거리
 
 Servo servo[2];
 Servo handle;
 
-int handleAngle = CENTER;
-int isBlocked[GAP]; //index에 해당되는 각도에서 limit 범위 내에 장애물이 측정되면 1 아니면 0
+int handleAngle = CENTER; // 초기 지팡이 핸들 각도: 기본 센터,
+int isBlocked[GAP]; // 장애물이 존재하는 지 측정하는 변수. 
+                    // limit 범위 내에 장애물이 측정될 경우 1, 아니면 0을 설정한다.
+                    // 센서가 회전하는 각도를 GAP만큼의 개수로 균일하게 나누고,
+                    // 균일하게 나눠진 각도만큼의 범위에 장애물 존재여부를 관리한다.
 
 const int handleMotorPin = A0;
 
@@ -78,7 +80,7 @@ void setup() {
   Serial.begin(9600);
   servo[RL].attach(ultraMotorPin[RL]);
   delay(15);
-  servo[UL].attach(ultraMotorPin[UL]);
+  servo[UB].attach(ultraMotorPin[UB]);
   delay(15);
   handle.attach(handleMotorPin);
   delay(15);
@@ -101,8 +103,8 @@ void loop() {
 
 void myTimer() {
   currentTime = millis();
-  if (currentTime - preTime >= duration) {
-    //지팡이와 바닥까지의 거리를 측정함(위 아래 움직일 때의 시작각도와 끝각도를 구하기 위해).
+  if (currentTime - preTime >= duration) { // 3초마다 모터 움직이도록 조정.
+    //지팡이와 바닥까지의 거리를 측정함 (위 아래 움직일 때의 시작각도와 끝각도를 구하기 위해).
     toStickFromBottom = sensingUltra(B);
     Serial.println(toStickFromBottom);
     //위아래 측정시 영역안에 장애물이 한개라도 있을 경우 true 아니면 false
@@ -129,7 +131,7 @@ void checkRightLeft() {
 }
 
 /*
-   모터가 위 아래로 1도 간격으로 움직이며 초음파 센서로 장애물과의 거리 측정
+   모터가 위 아래로 1도 간격으로 움직이는 동안에, 초음파 센서로 장애물과의 거리 측정
 */
 bool moveUltraMotorUpAndDown()
 {
@@ -139,19 +141,19 @@ bool moveUltraMotorUpAndDown()
   int result  = 0;
   if (pos <= maxAngle || pos >= 0)
   {
-    for (int i = pos; i < pe; i++)
+    for (int ang = pos; ang < pe; ang++) // for문을 돌며 모터 각도를 설정.
     {
-      servo[UL].write(i);
-      result = sensingUltra(UL);
-      if (result == 1 &&  i != pos) {
+      servo[UB].write(ang);
+      result = sensingUltra(UB); // 해당 거리에 물체가 있는가?
+      if (result == 1 &&  ang != pos) { // Question: ang != pos를 한 이유는?
         return true;
       }
       delay(5);
     }
     Serial.print("\n");
-    for (int i = pe; i >= pos; i--)
+    for (int ang = pe; ang >= pos; ang--) // Question: 돌아가면서 체크는 안하는가?
     {
-      servo[UL].write(i);
+      servo[UB].write(ang);
       delay(5);
     }
   }
@@ -194,7 +196,7 @@ void moveUltraMotorRightAndLeft() {
   Serial.println();
   for (int i = 0 ; i <  GAP_END - GAP_START  ; i++ , angle--) {
     servo[RL].write(angle);
-    delay(5);
+    delay(5); // Question: isBlocked[i]는 돌아가면서 체크는 왜 안하는가?
   }
 }
 
@@ -286,30 +288,30 @@ void changeHandleAngle(int pos) {
 }
 
 
-int sensingUltra(int i) {
+int sensingUltra(int sensorType) {
   // 초음파를 보낸다. 다 보내면 echo가 HIGH 상태로 대기하게 된다.
-  digitalWrite(trigPin[i], LOW);
-  digitalWrite(echoPin[i], LOW);
+  digitalWrite(trigPin[sensorType], LOW);
+  digitalWrite(echoPin[sensorType], LOW);
 
   delayMicroseconds(2);
-  digitalWrite(trigPin[i], HIGH);
+  digitalWrite(trigPin[sensorType], HIGH);
   delayMicroseconds(10);
-  digitalWrite(trigPin[i], LOW);
+  digitalWrite(trigPin[sensorType], LOW);
 
   // echoPin 이 HIGH를 유지한 시간을 저장 한다.
-  unsigned long  mDuration = pulseIn(echoPin[i], HIGH);
+  unsigned long  mDuration = pulseIn(echoPin[sensorType], HIGH);
   delayMicroseconds(100);
   // HIGH 였을 때 시간(초음파가 보냈다가 다시 들어온 시간)을 가지고 거리를 계산 한다.
   float mDistance = mDuration / 29.0 / 2.0;
-  delayMicroseconds(100);
-  if (i == B) {
+  delayMicroseconds(100); // QUESTION: 왜 멈출까?
+  if (sensorType == B) { // 지면까지의 거리
     if (mDistance > 1.0)
       return mDistance;
     else
       return -1;
-  } else {
+  } else { // 좌/우, 상/하
     //이상한 값이거나 limit보다 장애물과의 거리가 짧으면 1을 리턴한다.
-    if (mDistance > 2.0 && mDistance < limit[i]) {
+    if (mDistance > 2.0 && mDistance < limit[sensorType]) {
       Serial.print("1");
       //Serial.print(mDistance);
       Serial.print(" ");

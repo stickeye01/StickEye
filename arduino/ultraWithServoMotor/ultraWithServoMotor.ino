@@ -156,14 +156,14 @@ void moveUltraMotorUpAndDown()
   int sum = 0;
   if (pos <= maxAngle || pos >= 0)
   {
-    for (int i = pos; i < endAng(180, 52, 50); i++)
+    for (int i = pos; i < pe; i++)
     {
       servo[UL].write(i);
       sum += sensingUltra(UL);
       delay(10);
     }
     Serial.print("\n");
-    for (int i = endAng(180, 52, 50); i >= pos; i--)
+    for (int i = pe; i >= pos; i--)
     {
       servo[UL].write(i);
       delay(5);
