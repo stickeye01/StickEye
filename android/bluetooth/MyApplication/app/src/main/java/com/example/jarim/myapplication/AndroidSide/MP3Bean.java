@@ -44,7 +44,7 @@ public class MP3Bean extends AppBean {
     public boolean start(Object o) {
         tts.ispeak("MP3가 실행되었습니다.");
         Constants.MENU_LEVEL = Constants.SUB_MENU_MODE;
-        if (isMusicOn == 1) playMusic(list.get(horizontal_index));
+        if (isMusicOn == 1 && horizontal_index < list.size()) playMusic(list.get(horizontal_index));
         return true;
     }
 
