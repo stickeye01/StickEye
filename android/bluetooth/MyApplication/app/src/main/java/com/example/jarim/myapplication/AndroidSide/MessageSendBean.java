@@ -27,8 +27,8 @@ import com.example.jarim.myapplication.TtsService;
 public class MessageSendBean extends AppBean {
     private EditText input_etext;
     private int no_degree = Constants.PHONE_NUM_WRITE_STAGE;
-    private String phone_num;
-    private String msg;
+    private String phone_num="";
+    private String msg="";
 
     public MessageSendBean(String _name, String _intentName, TtsService _tts, Context _ctx,
                            BrailleKeyboard _bKey) {
@@ -55,12 +55,16 @@ public class MessageSendBean extends AppBean {
     public void click() {
         if (no_degree == Constants.PHONE_NUM_WRITE_STAGE) {
             phone_num = input_etext.getText().toString();
-            tts.ispeak("문자 메시지를 입력하세요.");
-            input_etext.setText("");
-            input_etext.requestFocus();
-            bKey.TOffModeLock();
-            bKey.clearString();
-            no_degree = Constants.MESSAGE_WRITE_STAGE;
+            if (phone_num.length() > 8) {
+                tts.ispeak("문자 메시지를 입력하세요.");
+                input_etext.setText("");
+                input_etext.requestFocus();
+                bKey.TOffModeLock();
+                bKey.clearString();
+                no_degree = Constants.MESSAGE_WRITE_STAGE;
+            } else {
+                tts.ispeak("전화번호가 제대로 입력되지 않았습니다. 다시 입력해주세요.");
+            }
         } else if (no_degree == Constants.MESSAGE_WRITE_STAGE) {
             msg = input_etext.getText().toString();
             tts.ispeak("전송하시려면 클릭버튼을 다시 누르세요.");

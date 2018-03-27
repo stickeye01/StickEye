@@ -81,13 +81,15 @@ public class MP3Bean extends AppBean {
             tts.ispeak("메인 메뉴로 돌아갑니다.");
             Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
         } else {
-            // 종료 혹은 실행.
-            if (isMusicOn == 1) { // 이미 실행되고 있으므로 멈춘다.
-                isMusicOn = 0;
-                stopMusic();
-            } else {
-                isMusicOn = 1;
-                playMusic(list.get(horizontal_index));
+            if (!list.isEmpty() && horizontal_index < list.size()) {
+                // 종료 혹은 실행.
+                if (isMusicOn == 1) { // 이미 실행되고 있으므로 멈춘다.
+                    isMusicOn = 0;
+                    stopMusic();
+                } else {
+                    isMusicOn = 1;
+                    playMusic(list.get(horizontal_index));
+                }
             }
         }
     }

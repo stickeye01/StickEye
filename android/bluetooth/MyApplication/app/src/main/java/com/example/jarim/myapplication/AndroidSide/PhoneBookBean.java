@@ -68,7 +68,10 @@ public class PhoneBookBean extends AppBean {
             public int compare(ContactInfo contactInfo, ContactInfo t1) {
                 String srcKey = MediaStore.Audio.keyFor(contactInfo.getName());
                 String destKey = MediaStore.Audio.keyFor(t1.getName());
-                return srcKey.compareTo(destKey);
+                if (destKey != null && srcKey != null)
+                    return srcKey.compareTo(destKey);
+                else
+                    return 0;
             }
         };
         Collections.sort(contacts, comparator);
@@ -76,6 +79,7 @@ public class PhoneBookBean extends AppBean {
 
         int no = 0;
         for (ContactInfo cInfo : contacts) {
+            // ERROR
             char c = getChosung(cInfo.getName().charAt(0));
             Log.e("LHC", "CHAR:"+Character.toString(c));
             int index = getIndexOfHangul(c);
@@ -249,20 +253,23 @@ public class PhoneBookBean extends AppBean {
             tts.ispeak("메인 메뉴로 돌아갑니다.");
             Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
         } else if (vertical_index > -1) {
-            // 만약 전화번호가 선택된 상태일 경우.
-            // vertical_index가 -1이라는 것은, 아직 선택된 번호가 없는 메뉴 상태라는 뜻이다.
-            tts.sspeak("전화를 겁니다.");
-            ContactInfo cInfo = charPerConcats[horizontal_index].get(vertical_index);
-            Intent intent = new Intent(Intent.ACTION_CALL,
-                    Uri.parse("tel:" + cInfo.getPhoneNum()));
+            if (charPerConcats[horizontal_index] != null &&
+                    charPerConcats[horizontal_index].size() > vertical_index) {
+                // 만약 전화번호가 선택된 상태일 경우.
+                // vertical_index가 -1이라는 것은, 아직 선택된 번호가 없는 메뉴 상태라는 뜻이다.
+                tts.sspeak("전화를 겁니다.");
+                ContactInfo cInfo = charPerConcats[horizontal_index].get(vertical_index);
+                Intent intent = new Intent(Intent.ACTION_CALL,
+                        Uri.parse("tel:" + cInfo.getPhoneNum()));
 
-            // Check permissions
-            if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.CALL_PHONE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(mActivity,
-                        new String[]{Manifest.permission.CALL_PHONE}, 1);
-            } else {
-                mContext.startActivity(intent);
+                // Check permissions
+                if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.CALL_PHONE)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(mActivity,
+                            new String[]{Manifest.permission.CALL_PHONE}, 1);
+                } else {
+                    mContext.startActivity(intent);
+                }
             }
         }
     }
