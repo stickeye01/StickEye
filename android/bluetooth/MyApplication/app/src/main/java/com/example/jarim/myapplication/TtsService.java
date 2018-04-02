@@ -60,4 +60,23 @@ public class TtsService {
     public void ispeak(String text) {
         mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
     }
+
+    // speak number
+    public void sspeakNumber(String num) {
+        mTts.setSpeechRate((float)2);
+        for (int i = 0; i < num.length(); i++) {
+            sspeak(""+num.charAt(i));
+        }
+        mTts.setSpeechRate((float)0.8);
+    }
+
+    // speak number
+    public void ispeakNumber(String num) {
+        mTts.setSpeechRate((float)2);
+        for (int i = 0; i < num.length(); i++) {
+            ispeak(""+num.charAt(i));
+        }
+        mTts.setSpeechRate((float)0.8);
+    }
+
 }

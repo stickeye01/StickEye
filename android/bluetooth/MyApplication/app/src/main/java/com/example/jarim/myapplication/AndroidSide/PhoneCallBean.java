@@ -45,7 +45,7 @@ public class PhoneCallBean extends AppBean{
         bKey.changeMode(Constants.B_NUM_MODE);
         bKey.TOnModeLock();
         bKey.clearString();
-        tts.sspeak("전화 걸기입니다. 전화번호를 입력하세요.");
+        tts.ispeak("전화 걸기입니다. 전화번호를 입력하세요.");
         input_etext.setText("");
         input_etext.requestFocus();
         return true;
@@ -61,11 +61,13 @@ public class PhoneCallBean extends AppBean{
             phoneNum = input_etext.getText().toString();
             input_etext.setText("");
             bKey.clearString();
-            tts.sspeak("전화번호가 입력되었습니다. 전화번호는 " + phoneNum + " 입니다.");
+            tts.sspeak("전화번호가 입력되었습니다. 전화번호는 ");
+            tts.sspeakNumber(phoneNum);
+            tts.sspeak(" 입니다.");
             tts.sspeak("전화를 걸고 싶으면 Click 버튼을 누르세요");
             no_degree = Constants.CALLING_STAGE;
         } else if (no_degree == Constants.CALLING_STAGE) {
-            tts.sspeak("전화를 겁니다.");
+            tts.ispeak("전화를 겁니다.");
             intent = new Intent(Intent.ACTION_CALL,
                     Uri.parse("tel:" + phoneNum));
 

@@ -106,7 +106,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
         subMenus.add("가까운 랜드마크 삭제");
         subMenus.add("메인 메뉴로 돌아가기");
 
-        tts.sspeak("네비게이션 기능입니다.");
+        tts.ispeak("네비게이션 기능입니다.");
         Constants.MENU_LEVEL = Constants.SUB_MENU_MODE;
         landMarkDBHandler.open();
         selectAllLandMarkLists(); // Fetch all landmarks data
@@ -150,7 +150,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
         String address = getAddress(lat, lng);
         String name = address.split(" ")[0];
         Log.e("LHC", "Address" + address);
-        tts.sspeak("현재 위치는 "+ getAddress(lat, lng)+ " 입니다.");
+        tts.ispeak("현재 위치는 "+ getAddress(lat, lng)+ " 입니다.");
         Log.e("LHC", "*********** on LocationChanged ***********");
 
         // 현재 위치 미리 저장
@@ -268,8 +268,8 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
             lm.requestLocationUpdates(locationProvider, 0, 0, this);
         } else if (horizontal_index == REGISTER_LOCATION) {
             if (no_degree == NORMAL_MODE) {
-                tts.sspeak("현재 위치를 랜드마크로 등록합니다.");
-                tts.sspeak("등록할 이름을 작성하고 다시 클릭하세요.");
+                tts.ispeak("현재 위치를 랜드마크로 등록합니다.");
+                tts.ispeak("등록할 이름을 작성하고 다시 클릭하세요.");
 
                 // Turn on the braille keyboard
                 input_etext.setText("");
@@ -300,7 +300,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
                 printLandMarkLists();
                 // return to the level
                 no_degree = NORMAL_MODE;
-                tts.sspeak("랜드마크 "+lm_name+"이 등록되었습니다.");
+                tts.ispeak("랜드마크 "+lm_name+"이 등록되었습니다.");
                 shortestLandMark =
                         findShortestLandmark(currentLandMark.getLat(),
                                             currentLandMark.getLng());
@@ -316,7 +316,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
             selectAllLandMarkLists();
             printLandMarkLists();
         } else if (horizontal_index == CLOSE_LANDMARK) {
-            tts.sspeak("가까운 랜드마크까지의 방향과 거리를 안내합니다.");
+            tts.ispeak("가까운 랜드마크까지의 방향과 거리를 안내합니다.");
             //////////////////////////////////////////////
             /// 리스너 제거 후 다시 추가하면서 event 시작.
             //////////////////////////////////////////////
@@ -336,7 +336,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
                 lm.requestLocationUpdates(locationProvider, 0, 0, this);
             }
         } else if (horizontal_index == GO_TO_MAINMENU) {
-            tts.sspeak("메인 메뉴로 돌아갑니다.");
+            tts.ispeak("메인 메뉴로 돌아갑니다.");
             landMarkDBHandler.close();
             Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
         }

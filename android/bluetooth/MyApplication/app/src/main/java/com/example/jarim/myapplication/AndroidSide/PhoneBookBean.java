@@ -257,7 +257,7 @@ public class PhoneBookBean extends AppBean {
                     charPerConcats[horizontal_index].size() > vertical_index) {
                 // 만약 전화번호가 선택된 상태일 경우.
                 // vertical_index가 -1이라는 것은, 아직 선택된 번호가 없는 메뉴 상태라는 뜻이다.
-                tts.sspeak("전화를 겁니다.");
+                tts.ispeak("전화를 겁니다.");
                 ContactInfo cInfo = charPerConcats[horizontal_index].get(vertical_index);
                 Intent intent = new Intent(Intent.ACTION_CALL,
                         Uri.parse("tel:" + cInfo.getPhoneNum()));

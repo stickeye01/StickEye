@@ -41,7 +41,7 @@ public class PhoneRegisterBean extends AppBean {
         Constants.MENU_LEVEL = Constants.BRAILLE_CLICK_MODE;
         bKey.turnOnBrailleKB();
         bKey.clearString();
-        tts.sspeak("전화번호 등록입니다. 이름을 입력하세요.");
+        tts.ispeak("전화번호 등록입니다. 이름을 입력하세요.");
         input_etext.setText("");
         input_etext.requestFocus();
         return true;
@@ -66,7 +66,7 @@ public class PhoneRegisterBean extends AppBean {
                         .withValue(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME,
                                 name).build());
             }
-            tts.sspeak("번호를 입력하세요.");
+            tts.ispeak("번호를 입력하세요.");
             input_etext.setText("");
             input_etext.requestFocus();
             bKey.changeMode(Constants.B_NUM_MODE);
@@ -88,12 +88,12 @@ public class PhoneRegisterBean extends AppBean {
                                 ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
                         .build());
             }
-            tts.sspeak("등록하시겠습니까? 등록하시려면 click button을 누르세요.");
+            tts.ispeak("등록하시겠습니까? 등록하시려면 click button을 누르세요.");
             no_degree = Constants.REGISTER_FINAL_STAGE;
         } else if (no_degree == Constants.REGISTER_FINAL_STAGE) {
             try {
                 mContext.getContentResolver().applyBatch(ContactsContract.AUTHORITY, ops);
-                tts.sspeak("번호가 등록되었습니다!");
+                tts.ispeak("번호가 등록되었습니다!");
             } catch (RemoteException e) {
                 e.printStackTrace();
             } catch (OperationApplicationException e) {

@@ -29,6 +29,7 @@ public class MP3Bean extends AppBean {
     private ArrayList<MusicDto> list;
     private MediaPlayer mediaPlayer;
     private int horizontal_index = 0;
+    private int wantToBackMain = 0;
     private int isMusicOn = 1;
 
     public MP3Bean(String _name, String _intentName, TtsService _tts, Context _ctx,
@@ -51,6 +52,7 @@ public class MP3Bean extends AppBean {
     @Override
     public void left() {
         horizontal_index --;
+        wantToBackMain = 0;
         if (horizontal_index < 0) horizontal_index = list.size();
         if (horizontal_index == list.size()) {
             tts.ispeak("메인 메뉴로 돌아가기");
@@ -64,6 +66,7 @@ public class MP3Bean extends AppBean {
 
     @Override
     public void right() {
+        wantToBackMain = 0;
         horizontal_index ++;
         if (horizontal_index == list.size()) {
             tts.ispeak("메인 메뉴로 돌아가기");
@@ -76,10 +79,27 @@ public class MP3Bean extends AppBean {
     }
 
     @Override
+    public void top() {
+        wantToBackMain = 1;
+        tts.ispeak("메인 메뉴로 돌아가기");
+    }
+
+    @Override
+    public void down() {
+        wantToBackMain = 1;
+        tts.ispeak("메인 메뉴로 돌아가기");
+    }
+
+    @Override
     public void click() {
-        if (horizontal_index == list.size()) {
+        if (horizontal_index == list.size() || wantToBackMain == 1) {
             tts.ispeak("메인 메뉴로 돌아갑니다.");
+            wantToBackMain = 1;
             Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
+            if (isMusicOn == 1) {
+                isMusicOn = 0;
+                stopMusic();
+            }
         } else {
             if (!list.isEmpty() && horizontal_index < list.size()) {
                 // 종료 혹은 실행.

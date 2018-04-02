@@ -45,7 +45,7 @@ public class MessageSendBean extends AppBean {
         bKey.changeMode(Constants.B_NUM_MODE);
         bKey.TOnModeLock();
         bKey.clearString();
-        tts.sspeak("문자 메시지 보내기입니다. 전화번호를 입력하세요.");
+        tts.ispeak("문자 메시지 보내기입니다. 전화번호를 입력하세요.");
         input_etext.setText("");
         input_etext.requestFocus();
         return true;

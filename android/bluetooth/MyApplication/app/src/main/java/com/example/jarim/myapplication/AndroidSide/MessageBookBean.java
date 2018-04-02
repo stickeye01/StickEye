@@ -29,6 +29,7 @@ public class MessageBookBean extends AppBean {
     private EditText input_etext;
     private ArrayList<SMSMessage> msgLists;
     private int horizontal_index = 0;
+    private int wantToBackMain = 0;
     private int MSG_SIZE = 10;
 
     public MessageBookBean(String _name, String _intentName, TtsService _tts, Context _ctx,
@@ -41,7 +42,7 @@ public class MessageBookBean extends AppBean {
 
     @Override
     public boolean start(Object o) {
-        tts.sspeak("문자 메시지 읽기입니다. 조이스틱을 좌우로 움직여주세요.");
+        tts.ispeak("문자 메시지 읽기입니다. 조이스틱을 좌우로 움직여주세요.");
         Constants.MENU_LEVEL = Constants.SUB_MENU_MODE;
         return true;
     }
@@ -74,9 +75,9 @@ public class MessageBookBean extends AppBean {
         // Collections.sort(msgLists);
     }
 
-
     @Override
     public void left() {
+        wantToBackMain = 0;
         horizontal_index --;
         if (horizontal_index < 0) horizontal_index = MSG_SIZE;
         readSMSMessage();
@@ -91,6 +92,7 @@ public class MessageBookBean extends AppBean {
 
     @Override
     public void right() {
+        wantToBackMain = 0;
         horizontal_index ++;
         readSMSMessage();
         if (horizontal_index == MSG_SIZE)
@@ -104,11 +106,24 @@ public class MessageBookBean extends AppBean {
     }
 
     @Override
+    public void top() {
+        wantToBackMain = 1;
+        tts.ispeak("메인 메뉴로 돌아가기");
+    }
+
+    @Override
+    public void down() {
+        wantToBackMain = 1;
+        tts.ispeak("메인 메뉴로 돌아가기");
+    }
+
+    @Override
     public void click() {
         readSMSMessage();
-        if (horizontal_index == MSG_SIZE) {
+        if (horizontal_index == MSG_SIZE || wantToBackMain == 1) {
             tts.ispeak("메인 메뉴로 돌아갑니다.");
             Constants.MENU_LEVEL = Constants.MAIN_MENU_MODE;
+            wantToBackMain = 0;
         } else {
             if (!msgLists.isEmpty() && (horizontal_index > 0
                                 && horizontal_index < msgLists.size())) {
@@ -124,8 +139,8 @@ public class MessageBookBean extends AppBean {
      */
     private void readCurMessage() {
         SMSMessage selMsg = msgLists.get(horizontal_index);
-        tts.ispeak(selMsg.getAddress()+"에게 온 문자입니다.");
-        tts.ispeak(selMsg.getBody());
+        tts.sspeak(selMsg.getAddress()+"에게 온 문자입니다.");
+        tts.sspeak(selMsg.getBody());
     }
 
     public class SMSMessage implements  Comparable {
