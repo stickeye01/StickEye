@@ -67,6 +67,7 @@ public class PhoneRegisterBean extends AppBean {
                                 name).build());
             }
             tts.ispeak("번호를 입력하세요.");
+            Constants.TTS_MODE = Constants.TTS_READ_NUMBER;
             input_etext.setText("");
             input_etext.requestFocus();
             bKey.changeMode(Constants.B_NUM_MODE);
@@ -77,6 +78,7 @@ public class PhoneRegisterBean extends AppBean {
             phoneNum = input_etext.getText().toString();
             // Phone Numbers
             if (phoneNum != null) {
+                Constants.TTS_MODE = Constants.TTS_READ_NORMAL;
                 ops.add(ContentProviderOperation.newInsert(
                         ContactsContract.Data.CONTENT_URI)
                         .withValueBackReference(

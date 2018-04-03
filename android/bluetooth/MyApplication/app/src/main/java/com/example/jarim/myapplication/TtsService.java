@@ -53,19 +53,25 @@ public class TtsService {
 
     // ignore and speak
     public void sspeak(String text) {
+        if (Constants.TTS_MODE == Constants.TTS_READ_NORMAL)
             mTts.speak(text, TextToSpeech.QUEUE_ADD, null);
+        else
+            sspeakNumber(text);
     }
 
     // speak after speak
     public void ispeak(String text) {
-        mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+        if (Constants.TTS_MODE == Constants.TTS_READ_NORMAL)
+            mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+        else
+            ispeakNumber(text);
     }
 
     // speak number
     public void sspeakNumber(String num) {
         mTts.setSpeechRate((float)2);
         for (int i = 0; i < num.length(); i++) {
-            sspeak(""+num.charAt(i));
+            mTts.speak(""+num.charAt(i), TextToSpeech.QUEUE_ADD, null);
         }
         mTts.setSpeechRate((float)0.8);
     }
@@ -74,7 +80,7 @@ public class TtsService {
     public void ispeakNumber(String num) {
         mTts.setSpeechRate((float)2);
         for (int i = 0; i < num.length(); i++) {
-            ispeak(""+num.charAt(i));
+            mTts.speak(""+num.charAt(i), TextToSpeech.QUEUE_FLUSH, null);
         }
         mTts.setSpeechRate((float)0.8);
     }

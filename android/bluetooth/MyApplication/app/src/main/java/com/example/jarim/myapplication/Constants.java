@@ -49,4 +49,8 @@ public class Constants {
     public static int B_ENG_I_MODE = 1;
     public static int B_ENG_U_MODE = 2;
     public static int B_NUM_MODE = 3;
+
+    public static final int TTS_READ_NUMBER = 0;
+    public static final int TTS_READ_NORMAL = 1;
+    public static int TTS_MODE = TTS_READ_NORMAL;
 }

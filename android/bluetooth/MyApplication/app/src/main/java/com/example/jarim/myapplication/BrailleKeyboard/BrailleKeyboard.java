@@ -9,12 +9,15 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.jarim.myapplication.Constants;
 import com.example.jarim.myapplication.R;
 import com.example.jarim.myapplication.TtsService;
+
+import java.util.Vector;
 
 public class BrailleKeyboard {
 
@@ -35,11 +38,32 @@ public class BrailleKeyboard {
     private int isModeLock = 0;
 
     private TextView bMode;
+    private Vector<RadioButton> radioButtons;
+    private RadioButton button0;
+    private RadioButton button1;
+    private RadioButton button2;
+    private RadioButton button3;
+    private RadioButton button4;
+    private RadioButton button5;
+    private RadioButton button6;
 
     public BrailleKeyboard(TtsService _tts, Context _ctx) {
         tts = _tts;
         Activity activity = (Activity) _ctx;
         bMode = activity.findViewById(R.id.b_mode);
+        button0 = activity.findViewById(R.id.radio0);
+        button1 = activity.findViewById(R.id.radio1);
+        button2 = activity.findViewById(R.id.radio2);
+        button3 = activity.findViewById(R.id.radio3);
+        button4 = activity.findViewById(R.id.radio4);
+        button5 = activity.findViewById(R.id.radio5);
+        radioButtons = new Vector<RadioButton>();
+        radioButtons.add(button0);
+        radioButtons.add(button1);
+        radioButtons.add(button2);
+        radioButtons.add(button3);
+        radioButtons.add(button4);
+        radioButtons.add(button5);
     }
 
     public void init(int num[]) {
@@ -122,7 +146,12 @@ public class BrailleKeyboard {
     public String start(int input[]) {
         int flag = 0;
         for (int i = 0; i < 6; i++) {
-            if (input[i] == 1)      flag = 1;
+            if (input[i] == 1)  {
+                flag = 1;
+                radioButtons.get(i).setChecked(true);
+            } else {
+                radioButtons.get(i).setChecked(false);
+            }
         }
 
         if (flag == 1) {

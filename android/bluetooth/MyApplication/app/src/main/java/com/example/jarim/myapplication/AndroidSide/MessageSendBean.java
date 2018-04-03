@@ -46,6 +46,7 @@ public class MessageSendBean extends AppBean {
         bKey.TOnModeLock();
         bKey.clearString();
         tts.ispeak("문자 메시지 보내기입니다. 전화번호를 입력하세요.");
+        Constants.TTS_MODE = Constants.TTS_READ_NUMBER;
         input_etext.setText("");
         input_etext.requestFocus();
         return true;
@@ -56,6 +57,7 @@ public class MessageSendBean extends AppBean {
         if (no_degree == Constants.PHONE_NUM_WRITE_STAGE) {
             phone_num = input_etext.getText().toString();
             if (phone_num.length() > 8) {
+                Constants.TTS_MODE = Constants.TTS_READ_NORMAL;
                 tts.ispeak("문자 메시지를 입력하세요.");
                 input_etext.setText("");
                 input_etext.requestFocus();

@@ -127,7 +127,8 @@ public class MessageBookBean extends AppBean {
         } else {
             if (!msgLists.isEmpty() && (horizontal_index > 0
                                 && horizontal_index < msgLists.size())) {
-                tts.ispeak(Integer.toString(horizontal_index) + "번째 메시지를 읽습니다.");
+                tts.ispeak(Integer.toString(horizontal_index) +
+                        "번째 메시지를 읽습니다.");
                 readCurMessage();
                 // 사실 여기서 클릭 버튼을 한번 더 누르면 문자 답장도 가능하게 했으면 좋을듯.
             }
