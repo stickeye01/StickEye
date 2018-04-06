@@ -84,6 +84,7 @@ public class MultiDimensionMenu implements View.OnClickListener{
      */
     public void left() {
         initializeSetting();
+        Constants.TTS_MODE = Constants.TTS_READ_NORMAL;
         if (Constants.MENU_LEVEL == Constants.MAIN_MENU_MODE ||
                 Constants.MENU_LEVEL == Constants.BRAILLE_CLICK_MODE) {
             Log.e("LHC", "LEFT");
@@ -101,6 +102,7 @@ public class MultiDimensionMenu implements View.OnClickListener{
      *  move right.
      */
     public void right() {
+        Constants.TTS_MODE = Constants.TTS_READ_NORMAL;
         initializeSetting();
         if (Constants.MENU_LEVEL == Constants.MAIN_MENU_MODE ||
                 Constants.MENU_LEVEL == Constants.BRAILLE_CLICK_MODE) {

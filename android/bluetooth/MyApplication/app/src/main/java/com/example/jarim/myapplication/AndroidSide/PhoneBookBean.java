@@ -80,7 +80,9 @@ public class PhoneBookBean extends AppBean {
         int no = 0;
         for (ContactInfo cInfo : contacts) {
             // ERROR
-            char c = getChosung(cInfo.getName().charAt(0));
+            char firstChar = 'ㄱ';
+            if(cInfo.getName()!=null) firstChar = cInfo.getName().charAt(0);
+            char c = getChosung(firstChar);
             Log.e("LHC", "CHAR:"+Character.toString(c));
             int index = getIndexOfHangul(c);
             Log.e("LHC","<"+Integer.toString(no++)+"> "+"이름: "+cInfo.getName()+", 번호:"+cInfo.getPhoneNum()+"-->"+Integer.toString(index));

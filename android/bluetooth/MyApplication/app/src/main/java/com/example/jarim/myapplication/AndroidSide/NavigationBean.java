@@ -148,27 +148,31 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
         double lat = location.getLatitude();
         double lng = location.getLongitude();
         String address = getAddress(lat, lng);
-        String name = address.split(" ")[0];
-        Log.e("LHC", "Address" + address);
-        tts.ispeak("현재 위치는 "+ getAddress(lat, lng)+ " 입니다.");
-        Log.e("LHC", "*********** on LocationChanged ***********");
+        if (address != null) {
+            String name = address.split(" ")[0];
+            Log.e("LHC", "Address" + address);
+            tts.ispeak("현재 위치는 " + getAddress(lat, lng) + " 입니다.");
+            Log.e("LHC", "*********** on LocationChanged ***********");
 
-        // 현재 위치 미리 저장
-        currentLandMark = new LandMark(lat, lng, address, name);
-        // 가장 가까운 랜드마크 찾기
-        shortestLandMark = findShortestLandmark(lat, lng);
-        selectAllLandMarkLists();
-        printLandMarkLists();
+            // 현재 위치 미리 저장
+            currentLandMark = new LandMark(lat, lng, address, name);
+            // 가장 가까운 랜드마크 찾기
+            shortestLandMark = findShortestLandmark(lat, lng);
+            selectAllLandMarkLists();
+            printLandMarkLists();
 
-        if (register_landmark == 1) {
-            currentLandMark.setName(lm_name);
-            landMarkDBHandler.insert(currentLandMark);
-            register_landmark = 0;
-        }
+            if (register_landmark == 1) {
+                currentLandMark.setName(lm_name);
+                landMarkDBHandler.insert(currentLandMark);
+                register_landmark = 0;
+            }
 
-        if (check_dist_dir_land == 1) {
-            calcDDFrmShortestLM();
-            check_dist_dir_land = 0;
+            if (check_dist_dir_land == 1) {
+                calcDDFrmShortestLM();
+                check_dist_dir_land = 0;
+            }
+        } else {
+            tts.ispeak("GPS 모듈이 제대로 실행되고 있지 않습니다");
         }
         lm.removeUpdates(this);
     }
@@ -300,10 +304,15 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
                 printLandMarkLists();
                 // return to the level
                 no_degree = NORMAL_MODE;
-                tts.ispeak("랜드마크 "+lm_name+"이 등록되었습니다.");
-                shortestLandMark =
-                        findShortestLandmark(currentLandMark.getLat(),
-                                            currentLandMark.getLng());
+                if (currentLandMark != null) {
+                    tts.ispeak("랜드마크 " + lm_name + "이 등록되었습니다.");
+                    double lat = currentLandMark.getLat();
+                    double lng = currentLandMark.getLng();
+                    shortestLandMark =
+                            findShortestLandmark(lat, lng);
+                } else {
+                    tts.ispeak("스마트 폰 GPS 모듈에 문제가 생겼습니다.");
+                }
             }
         } else if (horizontal_index == REMOVE_LOCATION) {
             tts.ispeak("가까운 랜드마크를 제거합니다.");
