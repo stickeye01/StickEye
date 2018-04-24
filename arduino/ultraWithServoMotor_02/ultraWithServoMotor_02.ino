@@ -2,8 +2,15 @@
    arduino mini's PMW pins (d3,d5,d6,d9,d10,d11)
 */
 #include <Servo.h>
-#define RIGHT 50
-#define LEFT 130
+#include "I2Cdev.h"
+#include "MPU6050_6Axis_MotionApps20.h"
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    #include "Wire.h"
+#endif
+#define OUTPUT_READABLE_YAWPITCHROLL
+
+#define RIGHT 70
+#define LEFT 110
 #define CENTER 90
 
 #define SEQUENCE_LIMIT 30.0 //(degree)
@@ -13,7 +20,7 @@
 #define GAP 140
 #define GAP_START 20
 #define GAP_END 160
-#define NUM_ULTRA 3
+#define NUM_ULTRA 2
 #define RL 0 // Right and left
 #define UB 1 // Uppder and Bottom
 #define B 2 //Bottom
@@ -25,8 +32,8 @@
 const int limit[] = {60, 100};
 
 const int ultraMotorPin[] = {A2, A3};
-const int echoPin[] = {3, 6, 10};
-const int trigPin[] = {5, 9, 11};
+const int echoPin[] = {11 , 9};
+const int trigPin[] = {10, 6 };
 float distance[2] = {0}; //장애물과의 거리: index 0은 좌/우 측정, 1은 상/하
 
 // 회전 가능 각도 (최대/최소)
@@ -68,10 +75,23 @@ typedef struct {
 Section sections[SECTION_NUM];
 
 /*===================================================
-  interrupt button
+  Gyro Sensor
+  SCL : A5
+  SDA : A4
+  INT : D3
   =====================================================*/
-int buttonPin = 2;
-int clickState = 1;
+uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
+uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
+uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
+uint16_t fifoCount;     // count of all bytes currently in FIFO
+uint8_t fifoBuffer[64]; // FIFO storage buffer
+
+bool mpuReady =false;
+Quaternion q;           // [w, x, y, z]    
+float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+VectorFloat gravity;    // [x, y, z]            gravity vector
+MPU6050 mpu;
+
 /*===================================================
   setup
   =====================================================*/
@@ -82,20 +102,56 @@ void setup() {
   delay(15);
   servo[UB].attach(ultraMotorPin[UB]);
   delay(15);
-  //handle.attach(handleMotorPin);
-  //delay(15);
-  //handle.write(handleAngle);
-  //delay(15);
-  pinMode(buttonPin, INPUT);
-  clickState = 1;
+  servo[UB].write(0);
+  handle.attach(handleMotorPin);
+  delay(15);
+  handle.write(handleAngle);
+  delay(15);
+  initializeGyro();
+  delay(15);
+  
   for (int i = 0 ; i < NUM_ULTRA ; i++) {
     pinMode(trigPin[i], OUTPUT);
     pinMode(echoPin[i], INPUT);
     delay(3);
   }
+
   preTime = millis();
 }
 
+void initializeGyro(){
+   #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+        Wire.begin();
+        TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+    #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+        Fastwire::setup(400, true);
+    #endif
+    mpu.initialize();
+    devStatus = mpu.dmpInitialize();
+
+    mpu.setXGyroOffset(220);
+    mpu.setYGyroOffset(76);
+    mpu.setZGyroOffset(-85);
+    mpu.setZAccelOffset(1788);
+    
+     if (devStatus == 0) {
+        // turn on the DMP, now that it's ready
+        mpu.setDMPEnabled(true);
+        mpuIntStatus = mpu.getIntStatus();
+        // get expected DMP packet size for later comparison
+        packetSize = mpu.dmpGetFIFOPacketSize();
+        mpuReady = true;
+    } else {
+        // ERROR!
+        // 1 = initial memory load failed
+        // 2 = DMP configuration updates failed
+        // (if it's going to break, usually the code will be 1)
+        Serial.print(F("DMP Initialization failed (code "));
+        Serial.print(devStatus);
+        Serial.println(F(")"));
+    }
+    
+}
 
 void loop() {
   myTimer();
@@ -103,26 +159,49 @@ void loop() {
 
 void myTimer() {
   currentTime = millis();
-  if (currentTime - preTime >= duration) { // 3초마다 모터 움직이도록 조정.
-    //지팡이와 바닥까지의 거리를 측정함 (위 아래 움직일 때의 시작각도와 끝각도를 구하기 위해).
-    toStickFromBottom = sensingUltra(B);
-    Serial.println(toStickFromBottom);
+  if (currentTime - preTime >= duration) { // 3초마다 모터 움직이도록 조정
     //위아래 측정시 영역안에 장애물이 한개라도 있을 경우 true 아니면 false
     bool mIsBlocked = moveUltraMotorUpAndDown();
     if (mIsBlocked) {
-      // checkRightLeft();
       checkRightLeft_o1();
     } else {
       Serial.println("중앙");
-      //changeHandleAngle(CENTER);
+      changeHandleAngle(CENTER);
     }
     delayMicroseconds(10);
     preTime = currentTime;
   } else {
-
+    
   }
 }
 
+float getGyroSensorValue(){
+      mpuIntStatus = mpu.getIntStatus();
+    // get current FIFO count
+    fifoCount = mpu.getFIFOCount();
+    // check for overflow (this should never happen unless our code is too inefficient)
+    if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
+        // reset so we can continue cleanly
+        mpu.resetFIFO();
+    // otherwise, check for DMP data ready interrupt (this should happen frequently)
+    } else if (mpuIntStatus & 0x02) {
+        // wait for correct available data length, should be a VERY short wait
+        while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+        // read a packet from FIFO
+        mpu.getFIFOBytes(fifoBuffer, packetSize);
+        // track FIFO count here in case there is > 1 packet available
+        // (this lets us immediately read more without waiting for an interrupt)
+        fifoCount -= packetSize;
+        #ifdef OUTPUT_READABLE_YAWPITCHROLL
+            // display Euler angles in degrees
+            mpu.dmpGetQuaternion(&q, fifoBuffer);
+            mpu.dmpGetGravity(&gravity, &q);
+            mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+        #endif
+    } 
+    
+    return (ypr[1] + 180/M_PI);
+}
 /**
  * 좌/우 방향 판단 (optimized version).
  * 현재는 아무것도 안하고 serial print로 출력함.
@@ -132,12 +211,16 @@ void checkRightLeft_o1() {
   if (direction != 0)
     if (direction == LEFT) {
       Serial.println("Direction: 왼쪽");
+      changeHandleAngle(LEFT);
     } else if (direction == RIGHT) {
+      changeHandleAngle(RIGHT);
       Serial.println("Direction: 오른쪽");
     } else if (direction == CENTER) {
+      changeHandleAngle(RIGHT);
       Serial.println("Direction: 중앙");
     } else {
-      Serial.println("Direction: 방향X");
+      changeHandleAngle(CENTER);
+      Serial.println("Direction: 방향 X");
     }
   else
     Serial.println("막힘.....");
@@ -160,8 +243,14 @@ void checkRightLeft() {
  */
 bool moveUltraMotorUpAndDown()
 {
-  int pos = startAng(180, 52, 50);
-  float pe = endAng(180, 52, 50);
+  float d = 60;
+  if(mpuReady){
+    d = getGyroSensorValue();
+    Serial.print(d);
+    Serial.println("도");
+  }
+  int pos = startAng(180, 34, d);
+  float pe = endAng(180, 34, d);
   int sum = 0;
   int result  = 0;
   if (pos <= maxAngle || pos >= 0)
@@ -187,29 +276,41 @@ bool moveUltraMotorUpAndDown()
 
 /**
  * 시스템 구동시, 모터 초기 각도 계산.
+ * l : 길이
+ * l*sin(a)
+ * d는 자이로센서로 구한 지팡이 각도
+ * a : l*sin(각도)
  */
-float startAng(float r, float l, float a)
+float startAng(float r, float l, float d)
 {
+  float a = l*sin(d);
   float x = a / l;
-  float rad_x = asin(x);
+  float rad_x = acos(x);
   float ang_x = rad_x / 3.141592654 * 180;
 
   float y = a / r;
-  float rad_y = asin(y);
+  float rad_y = acos(y);
   float ang_y = rad_y / 3.141592654 * 180;
-
-  return ang_x - ang_y;
+  
+  Serial.print("시작각도 ");
+  Serial.print(ang_x - ang_y);
+  Serial.println();
+  return ang_y - ang_x;
 }
 
-/**
+/*
  * 시스템 구동시, 모터 종료 각도 계산
  */
-float endAng(float r, float l, float a)
+float endAng(float r, float l, float d)
 {
+  float a = l*sin(d);
   float z = (180 - a) / r;
   float rad_z = asin(z);
   float ang_z = rad_z / 3.141592654 * 180;
-
+  
+  Serial.print("끝각도 ");
+  Serial.print((ang_z+100));
+  Serial.println();
   return ang_z + 100;
 }
 
@@ -244,7 +345,7 @@ int moveUltraMotorRightAndLeft_o1() {
     } else if (count > 0) {
       eCount ++;
       emptyRate = eCount / count * 100;
-      Serial.println(String(eCount)+"/"+String(count)+"*100 ="+String(emptyRate));
+      //Serial.println(String(eCount)+"/"+String(count)+"*100 ="+String(emptyRate));
       if (emptyRate < 10) {
         curVal = 0; // emptyRate가 20%보다 작을 경우, 강제로 현재 장애물 여부 변수를
                     // '장애물 없음'으로 지정한다. 따라서 다음 iteration에는
@@ -267,7 +368,7 @@ int moveUltraMotorRightAndLeft_o1() {
     }
     // @}
 
-    Serial.print(curVal);
+    //Serial.print(curVal);
     preVal = curVal;
   }
   Serial.println();
@@ -382,7 +483,6 @@ int sensingUltra(int sensorType) {
   // 초음파를 보낸다. 다 보내면 echo가 HIGH 상태로 대기하게 된다.
   digitalWrite(trigPin[sensorType], LOW);
   digitalWrite(echoPin[sensorType], LOW);
-
   delayMicroseconds(2);
   digitalWrite(trigPin[sensorType], HIGH);
   delayMicroseconds(10);
@@ -394,18 +494,16 @@ int sensingUltra(int sensorType) {
   // HIGH 였을 때 시간(초음파가 보냈다가 다시 들어온 시간)을 가지고 거리를 계산 한다.
   float mDistance = mDuration / 29.0 / 2.0;
   //delayMicroseconds(100); // QUESTION: 왜 멈출까?
-  if (sensorType == B) { // 지면까지의 거리
-    if (mDistance > 1.0)
-      return mDistance;
-    else
-      return -1;
-  } else { // 좌/우, 상/하
+ // 좌/우, 상/하
     //이상한 값이거나 limit보다 장애물과의 거리가 짧으면 1을 리턴한다.
     if (mDistance > 2.0 && mDistance < limit[sensorType]) {
+      if(sensorType==UB)        Serial.print("distance : ");
+        Serial.println(mDistance);
+      }
       return 1;
     } else {
       return 0;
     }
-  }
+  
 }
 
