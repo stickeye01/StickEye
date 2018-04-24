@@ -6,14 +6,14 @@
 #define BUFF_SIZE 256
 #define SCL_PIN 2
 #define SDO_PIN 3
-#define TTP_229_TYPE 0
-#define MPR_121_TYPE 1
+#define TTP_229_TYPE 1
+#define MPR_121_TYPE 0
 TTP229 ttp229(SCL_PIN, SDO_PIN); // TTP229(sclPin, sdoPin)
 
 int ledPin = 13;
 
 // IRQ:2, SCL: A5, SDA: A4,..
-int touchPadMode = MPR_121_TYPE;
+int touchPadMode = TTP_229_TYPE;
 
 // TTP229 를 사용하였을 때,
 byte touchedKey;
@@ -252,7 +252,7 @@ void checkTouchPad() {
     key =  checkMPR121Key();
   }
   if (key) {
-    //Serial.println(key);
+    Serial.println(key);
     String dir;
     if (key == 3) { // 0
       dir = "\rb0\n";
