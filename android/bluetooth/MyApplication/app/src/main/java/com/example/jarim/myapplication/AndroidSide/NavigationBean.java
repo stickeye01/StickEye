@@ -66,10 +66,13 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
     private EditText input_etext;
     private String lm_name = "";
 
+    private SubwayInfoParser subwayHandler;
+
     public NavigationBean(String _name, String _intentName, TtsService _tts, Context _ctx,
                           BrailleKeyboard _bKey) {
         super(_name, _intentName, _tts, _ctx, _bKey);
         input_etext = mActivity.findViewById(R.id.test_input);
+        subwayHandler = new SubwayInfoParser(_ctx);
     }
 
     @Override
@@ -363,6 +366,17 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
                 check_dist_dir_land = 1;
                 lm.removeUpdates(this);
                 lm.requestLocationUpdates(locationProvider, 0, 0, this);
+            }
+        } else if (horizontal_index == CLOSE_SUBWAY) {
+            if (currentLandMark != null) {
+                SubwayInfo closeSubway = subwayHandler.
+                        findShortestLandmark(currentLandMark.getLat(),
+                                            currentLandMark.getLng());
+                tts.ispeak("가까운 지하철은 "+closeSubway.getName()+"입니다.");
+                // 다음 해야할 것: 전화번호 연결하기..
+            } else {
+                // 가까운 위치 찾기
+                tts.ispeak("아직 현재 위치를 모르네요.");
             }
         } else if (horizontal_index == GO_TO_MAINMENU) {
             tts.ispeak("메인 메뉴로 돌아갑니다.");
