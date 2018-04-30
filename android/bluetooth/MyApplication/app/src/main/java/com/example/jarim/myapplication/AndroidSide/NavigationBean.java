@@ -48,6 +48,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
     private final int LANDMARK = 1;
     private final int CLOSE_SUBWAY = 2;
     private final int GO_TO_MAINMENU = 3;
+    private final int CLOSE_SUBWAY_CALL = 4;
     private final int NORMAL_MODE = 5;
     private final int LM_REG_MODE = 6;
     //private final int REGISTER_LOCATION = 1;
@@ -67,6 +68,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
     private String lm_name = "";
 
     private SubwayInfoParser subwayHandler;
+    private SubwayInfo closeSubway;
 
     public NavigationBean(String _name, String _intentName, TtsService _tts, Context _ctx,
                           BrailleKeyboard _bKey) {
@@ -118,6 +120,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
         subCurLoc.add("현재 위치를 랜드마크로 등록");
         subLandMrk.add("랜드마크 정보");
         subSubway.add("가까운 지하철");
+        subSubway.add("가까운 지하철 역에 전화하기");
         subMainMenu.add("메인 메뉴로 돌아가기");
 
         subMenus.add(subCurLoc);
@@ -179,6 +182,9 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
             shortestLandMark = findShortestLandmark(lat, lng);
             selectAllLandMarkLists();
             printLandMarkLists();
+            closeSubway = subwayHandler.
+                    findShortestLandmark(currentLandMark.getLat(),
+                            currentLandMark.getLng());
 
             if (register_landmark == 1) {
                 currentLandMark.setName(lm_name);
@@ -367,16 +373,42 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
                 lm.removeUpdates(this);
                 lm.requestLocationUpdates(locationProvider, 0, 0, this);
             }
-        } else if (horizontal_index == CLOSE_SUBWAY) {
+        } else if (horizontal_index == CLOSE_SUBWAY && vertical_index == 0) {
             if (currentLandMark != null) {
-                SubwayInfo closeSubway = subwayHandler.
+                closeSubway = subwayHandler.
                         findShortestLandmark(currentLandMark.getLat(),
                                             currentLandMark.getLng());
-                tts.ispeak("가까운 지하철은 "+closeSubway.getName()+"입니다.");
+                tts.ispeak("가까운 지하철은 "+closeSubway.getName()+"입니다. " +
+                        " 조이스틱을 ");
+                no_degree = CLOSE_SUBWAY;
                 // 다음 해야할 것: 전화번호 연결하기..
             } else {
                 // 가까운 위치 찾기
                 tts.ispeak("아직 현재 위치를 모르네요.");
+            }
+        } else if (horizontal_index == CLOSE_SUBWAY && vertical_index == 1) {
+            if (closeSubway != null) {
+                if (no_degree == CLOSE_SUBWAY) {
+                    tts.ispeak(closeSubway.getName() + "의 전화번호는 " + closeSubway.getPhoneNum() + "입니다. " +
+                            "한번 더 누르면 전화연결됩니다.");
+                    no_degree = CLOSE_SUBWAY_CALL;
+                } else if (no_degree == CLOSE_SUBWAY_CALL) {
+                    tts.ispeak("전화를 겁니다.");
+                    Intent intent = new Intent(Intent.ACTION_CALL,
+                            Uri.parse("tel:" + closeSubway.getPhoneNum()));
+
+                    // Check permissions
+                    if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.CALL_PHONE)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(mActivity,
+                                new String[]{Manifest.permission.CALL_PHONE}, 1);
+                    } else {
+                        mContext.startActivity(intent);
+                    }
+                    no_degree = NORMAL_MODE;
+                }
+            } else {
+                tts.ispeak("아직 현재 위치가 제대로 측정되지 않았습니다. 잠시 후에 다시 시도해주세요.");
             }
         } else if (horizontal_index == GO_TO_MAINMENU) {
             tts.ispeak("메인 메뉴로 돌아갑니다.");
@@ -412,6 +444,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
         vertical_index ++;
         if (subMenus.get(horizontal_index).size() <= vertical_index) vertical_index = 0;
         tts.ispeak(subMenus.get(horizontal_index).get(vertical_index).toString());
+        menu_txt.setText("네비게이션:"+subMenus.get(horizontal_index).get(vertical_index).toString());
     }
 
     @Override
@@ -419,6 +452,7 @@ public class NavigationBean extends AppBean implements View.OnClickListener, Loc
         vertical_index --;
         if (vertical_index < 0) vertical_index = subMenus.get(horizontal_index).size() - 1;
         tts.ispeak(subMenus.get(horizontal_index).get(vertical_index).toString());
+        menu_txt.setText("네비게이션:"+subMenus.get(horizontal_index).get(vertical_index).toString());
     }
 
     @Override
