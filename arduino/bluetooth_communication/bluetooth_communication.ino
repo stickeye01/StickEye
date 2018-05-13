@@ -1,15 +1,43 @@
- #include <SoftwareSerial.h>
+#include <SoftwareSerial.h>
+#include <Wire.h>
+#include "TTP229.h"
+#include "Adafruit_MPR121.h"
 
 #define BUFF_SIZE 256
+#define SCL_PIN 2
+#define SDO_PIN 3
+#define TTP_229_TYPE 0
+#define MPR_121_TYPE 1
+TTP229 ttp229(SCL_PIN, SDO_PIN); // TTP229(sclPin, sdoPin)
+
+int ledPin = 13;
+
+// IRQ:2, SCL: A5, SDA: A4,..
+int touchPadMode = MPR_121_TYPE;
+
+// TTP229 를 사용하였을 때,
+byte touchedKey;
+volatile uint16_t btnState;
+static uint16_t oldState = 9999;
+
+// MPR121을 사용하였을 때
+uint16_t lastTouched = 0;
+uint16_t currTouched = 0;
+// You can have up to 4 on one i2c bus but one is enough for testing!
+Adafruit_MPR121 cap = Adafruit_MPR121();
+
+
 int joystick_x = A0;
 int joystick_y = A1;
 int joystick_press = 9;
-int blue_Tx = 2;  //블루투스 모듈의 T(Transmitt)x를 Digital pin 9번에 연결
-int blue_Rx = 3;  //블루투스 모듈의 R(Receive)x를 Digital pin 10번에 연결
+int blue_Tx = 7;  //블루투스 모듈의 T(Transmitt)x를 Digital pin 9번에 연결
+int blue_Rx = 4;  //블루투스 모듈의 R(Receive)x를 Digital pin 10번에 연결
+
 int bufferSize = 0;
 //String mac_addr = "rn00:21:13:01:51:5D\n"; // 박효정 MAC_ID
 String mac_addr = "\r20:16:05:19:90:62\n"; // 이호찬 MAC_ID
 //00:21:13:01:51:5D//??
+int isSerialMode = 0;
 
 int top_m = 0;
 int bottom_m = 0;
@@ -35,18 +63,40 @@ String command = "";
 *초기 접속시에는 비밀번호 입력
 */
 void setup(){
-  pinMode(joystick_press, INPUT);
-  digitalWrite(joystick_press, HIGH);
   BTSerial.begin(9600);
   Serial.begin(9600);
+
+  pinMode(ledPin, OUTPUT);
+  
+  pinMode(joystick_press, INPUT);
+  digitalWrite(joystick_press, HIGH);
+
+  pinMode(SCL_PIN, OUTPUT);
+  pinMode(SDO_PIN, INPUT);
+ 
   index =0;
   bufferSize = 0;
+
+  if (touchPadMode == MPR_121_TYPE) {
+    while (!Serial) {
+       delay(10);
+    }
+    if (!cap.begin(0x5A)) {
+      Serial.println("MPR121 not found, check wiring.");
+      while(1) ;
+    }
+    Serial.println("MPR121 found!");
+  }
 }
 
 void loop(){
     serialMode();
-    sendJoyStickInput();
-    //bluetoothMode();
+    if (isSerialMode == 0) {   // While Arduino is being in serial mode, then ignore others.
+      bluetoothMode();
+      sendJoyStickInput();
+      checkTouchPad();
+    }
+    
     //if(BTSerial.available()){
     //  Serial.write(BTSerial.read());
     //  delay(500);
@@ -87,15 +137,22 @@ void serialMode(){
     char c = (char) Serial.read();
     delay(1);
     if (c == '\0') {
+      isSerialMode = 0;
       command = "";
       delay(1);
     } else {
+      isSerialMode = 1;
       command.concat(c);
       delay(1);
     }
          
     if(command.equals("MAC_ADDR")){
-      //Serial.println(mac_addr);
+      Serial.println(mac_addr);
+      
+ //     digitalWrite(ledPin, HIGH);
+   //   delay(1000);
+     // digitalWrite(ledPin, LOW);
+     // delay(1000);
       writeStringUsb(mac_addr);
     }
   } //
@@ -124,17 +181,17 @@ void writeStringBt(String stringData) {
 }
 
 /**
- * JoyStick 입력에 따라 Bluetooth 전송.
+ * Send Bluetooth based on JoyStick inputs.
  */
 void sendJoyStickInput() {
   // put your main code here, to run repeatedly:
   int x = analogRead(joystick_x);
   int y = analogRead(joystick_y);
 
-  // 조이스틱 클릭 시 사용.
+  // Process clicking the button.
   if (digitalRead(joystick_press) == LOW && 
         x >= 400 && x <= 600 && y >= 400 && y <= 600 && sel_m == 0) {
-      Serial.print("선");
+      Serial.print("s");
       // If clicked the joystick button
       char dir[] = "\rds\n";
       writeStringBt(dir);
@@ -142,15 +199,15 @@ void sendJoyStickInput() {
   }
   if (digitalRead(joystick_press) == HIGH) sel_m = 0;
 
-  // 조이스틱 방향 별 작업.
+  // Tasks per joystick direction.
   if (y >= 400 && y <= 600) {
     if (x >= 600 && x <= 1023 && right_m == 0) {
-      Serial.print("우");
+      Serial.print("r");
       setJoyStickDirection(0, 0, 0, 1);
       char dir[] = "\rdr\n";
       writeStringBt(dir);
     } else if(x >= 0 && x <= 400 && left_m == 0) {
-      Serial.print("좌");
+      Serial.print("l");
       setJoyStickDirection(0, 0, 1, 0);
       char dir[] = "\rdl\n";
       writeStringBt(dir);
@@ -159,12 +216,12 @@ void sendJoyStickInput() {
       setJoyStickDirection(0, 0, 0, 0);
   } else if (x >= 400 && x <= 600) {
     if (y >= 600 && y <= 1023 && bottom_m == 0) {
-      Serial.print("하");
+      Serial.print("b");
       setJoyStickDirection(0, 1, 0, 0);
       char dir[] = "\rdb\n";
       writeStringBt(dir);
     } else if(y >= 0 && y <=400 && top_m == 0) {
-      Serial.print("상");
+      Serial.print("u");
       setJoyStickDirection(1, 0, 0, 0);
       char dir[] = "\rdt\n";
       writeStringBt(dir);
@@ -175,7 +232,7 @@ void sendJoyStickInput() {
 }
 
 /**
- *  flag 변수 설정 함수.
+ *  Set the flags.
  */
 void setJoyStickDirection(int _top_m, int _bottom_m, int _left_m, int _right_m) {
   top_m = _top_m;
@@ -183,4 +240,78 @@ void setJoyStickDirection(int _top_m, int _bottom_m, int _left_m, int _right_m) 
   left_m = _left_m;
   right_m = _right_m;
 }
+
+/**
+ * Check touchpad and send the values to the smartphone.
+ */
+void checkTouchPad() {
+  uint16_t key = 0;
+  if (touchPadMode == TTP_229_TYPE) {
+    key = ttp229.ReadKey16(); // Blocking
+  } else if (touchPadMode == MPR_121_TYPE) {
+    key =  checkMPR121Key();
+  }
+  if (key) {
+    //Serial.println(key);
+    String dir;
+    if (key == 3) { // 0
+      dir = "\rb0\n";
+    } else if (key == 2) { // 1
+      dir = "\rb1\n"; 
+    } else if (key == 1) { // 2
+      dir = "\rb2\n"; 
+    } else if (key == 7) { // 3
+      dir = "\rb3\n"; 
+    } else if (key == 6) { // 4
+      dir = "\rb4\n"; 
+    } else if (key == 5) { // 5
+      dir = "\rb5\n"; 
+    } else if (key == 9) { // remove
+      dir = "\rbr\n"; 
+    } else if (key == 4) { // mode
+      dir = "\rbm\n"; 
+    } else if (key == 8) { // complete
+      dir = "\rbc\n"; 
+    } else if (key == 7) { // dobule
+      dir = "\rbd\n";
+    } else if (key == 11) { // remove all
+      dir = "\rbra\n"; 
+    }
+   
+    writeStringBt(dir);
+    delay(100);
+  }
+  return;
+}
+
+uint8_t checkMPR121Key() {
+  currTouched = cap.touched();  
+  for (uint8_t i=0; i<12; i++) {
+    // it if *is* touched and *wasnt* touched before, alert!
+    if ((currTouched & _BV(i)) && !(lastTouched & _BV(i)) ) {
+      Serial.print(i); Serial.println(" touched");
+    }
+    // if it *was* touched and now *isnt*, alert!
+    if (!(currTouched & _BV(i)) && (lastTouched & _BV(i)) ) {
+      //Serial.print(i); Serial.println(" released");
+      if (i == 2) return 3; // 0
+      else if (i == 1) return 2; // 1
+      else if (i == 0) return 1; // 2
+      else if (i == 6) return 7; // 3
+      else if (i == 5) return 6; // 4
+      else if (i == 4) return 5; // 5
+      else if (i == 3) return 4; // mode
+      else if (i == 7) return 11; // remove all
+      else if (i == 11) return 9; // remove
+      else if (i == 9) return 7; // double
+      else if (i == 8) return 8; // complete
+    }
+  }
+
+  delay(8);
+  lastTouched = currTouched;
+
+  return ;
+}
+
 

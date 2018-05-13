@@ -30,6 +30,7 @@ public class TtsService {
             //setting the language
             if (status == TextToSpeech.SUCCESS) {
                 int result = mTts.setLanguage(Locale.KOREAN);
+                int rate = mTts.setSpeechRate((float) 0.8);
                 isLoaded = true;
                 //error is detected
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
@@ -52,11 +53,36 @@ public class TtsService {
 
     // ignore and speak
     public void sspeak(String text) {
+        if (Constants.TTS_MODE == Constants.TTS_READ_NORMAL)
             mTts.speak(text, TextToSpeech.QUEUE_ADD, null);
+        else
+            sspeakNumber(text);
     }
 
     // speak after speak
     public void ispeak(String text) {
-        mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+        if (Constants.TTS_MODE == Constants.TTS_READ_NORMAL)
+            mTts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+        else
+            ispeakNumber(text);
     }
+
+    // speak number
+    public void sspeakNumber(String num) {
+        mTts.setSpeechRate((float)2);
+        for (int i = 0; i < num.length(); i++) {
+            mTts.speak(""+num.charAt(i), TextToSpeech.QUEUE_ADD, null);
+        }
+        mTts.setSpeechRate((float)0.8);
+    }
+
+    // speak number
+    public void ispeakNumber(String num) {
+        mTts.setSpeechRate((float)2);
+        for (int i = 0; i < num.length(); i++) {
+            mTts.speak(""+num.charAt(i), TextToSpeech.QUEUE_FLUSH, null);
+        }
+        mTts.setSpeechRate((float)0.8);
+    }
+
 }

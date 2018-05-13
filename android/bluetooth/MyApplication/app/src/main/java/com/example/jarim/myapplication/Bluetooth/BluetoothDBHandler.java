@@ -1,11 +1,9 @@
-package com.example.jarim.myapplication;
+package com.example.jarim.myapplication.Bluetooth;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.database.DatabaseErrorHandler;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
@@ -17,7 +15,7 @@ import java.io.File;
  * After saving it,
  */
 
-public class DBHandler {
+public class BluetoothDBHandler {
     private static final String DATABASE_NAME ="bluetooth.device";
     private static final int DATABASE_VERSION = 1;
     public static SQLiteDatabase mDB;
@@ -95,7 +93,7 @@ public class DBHandler {
             String result = "";
 
             Cursor cursor = mDB.rawQuery("SELECT address FROM "+CreateDB._TABLENAME+" where device='target'", null);
-            Log.e("LHC", "DBHandler: "+Integer.toString(cursor.getCount())+", Position:"+Integer.toString(cursor.getPosition()));
+            Log.e("LHC", "BluetoothDBHandler: "+Integer.toString(cursor.getCount())+", Position:"+Integer.toString(cursor.getPosition()));
             if (cursor.getCount() > 0) {
                 cursor.moveToFirst();
                 result += cursor.getString(0) + "\n";
@@ -103,22 +101,22 @@ public class DBHandler {
                 result = "No device exists";
             }
 
-            Log.e("LHC", "DBHandler: "+cursor.toString()+":"+result);
+            Log.e("LHC", "BluetoothDBHandler: "+cursor.toString()+":"+result);
             return result;
         }
     }
     //@}
 
-    public DBHandler(Context context) {
+    public BluetoothDBHandler(Context context) {
         this.mCtx = context;
     }
 
-    public DBHandler open() throws SQLException{
+    public BluetoothDBHandler open() throws SQLException{
         mDBController = new DBController(mCtx, DATABASE_NAME, null, DATABASE_VERSION);
         return this;
     }
 
-    public DBHandler insert(String device_name, String device_address) {
+    public BluetoothDBHandler insert(String device_name, String device_address) {
         mDB = mDBController.getWritableDatabase();
         Log.e("LHC", "DB insert:"+device_address+", LENGHT:"+device_address.length());
         mDBController.insert(mDB, device_name, device_address);
@@ -126,7 +124,7 @@ public class DBHandler {
         return this;
     }
 
-    public DBHandler deleteAll() {
+    public BluetoothDBHandler deleteAll() {
         mDB = mDBController.getWritableDatabase();
         mDBController.deleteAll(mDB);
         mDB.close();
