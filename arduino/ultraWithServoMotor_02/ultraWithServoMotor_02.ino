@@ -26,7 +26,7 @@
 #define UB 1 // Uppder and Bottom
 #define B 2 //Bottom
 
-#define HYPO_BOTTOM 19 //아래에 달린 초음파 센서의 지팡이 상의 빗변 길이
+#define HYPO_BOTTOM 19 //바닥 측정을 위해 달린 초음파 센서의 지팡이 상의 빗변 길이
 #define HYPO_TOP 48 //위에 달린 초음파 센서의 지팡이 상의 빗변 길이
 
 /*========================================================
@@ -167,7 +167,7 @@ void myTimer() {
      * 낭떠러지라고 판단 될 경우 진동으로 알림
      * <<알림 코드 아직 추가 X>>
      */
-    isCliff(tilt,longestHypo);
+    //isCliff(tilt,longestHypo);
     
 
     /*
@@ -199,7 +199,7 @@ float getLongestHypo(){
   //float sum = 0 ;
   float val;
   //for(int i = 0 ; i<10  ; i++){
-    val =  sensingUltra(UB);
+  val =  sensingUltra(UB);
   //  sum += val;
   //  printStr("Logest Hypo value: ",val);
   //}
@@ -209,20 +209,24 @@ float getLongestHypo(){
 
 /*
  * 지팡이의 기울기 구하기 - Sin(degree)
- * hypo0 : 위에 달린 센서로 측정한 바닥까지의 빗변거리
- * hypo1 : 아래 달린 센서의 지팡이 상의 위치
- * hypo2 : 위에 달린 센서의 지팡이 상의 위치
+ * longestHypo : 위아래 장애물을 감지하는 센서로 측정한 센서와 바닥까지의 빗변거리
+ * HYPO_BOTTOM : 바닥과의 직선거리를 측정하는 아래쪽 센서의 지팡이 상의 위치
+ * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
  * height1 : 아래 달린 센서로 측정한 지팡이와 바닥의 직각 거리
- * return 값은 sin(tilt)
+ * 리턴 되는 값은 sin(지팡이의 기울기 각도)
  */
 float getTilt(float longestHypo){
    float height1 = sensingUltra(B);
    printStr("Bottom, height : ", height1);
-   return height/(longestHypo-HYPO_TOP+HYPO_BOTTOM);
+   return height1/(longestHypo-HYPO_TOP+HYPO_BOTTOM);
 }
 
 /*
  * 아래 급격한 경사가 있는지 없는지 판단
+ * height1 : 아래 달린 센서의 바닥과의 직각 거리 (높이)
+ * height2 : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이)
+ *  (i)  height1 + x = height2  ………………일반 보행길
+ *  (ii) height1 + x > height2  ………………낭떠러지
  */
 bool isCliff(float tilt,float longestHypo){
   float height1 = sensingUltra(B);
@@ -250,7 +254,7 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
     {
       servo[UB].write(ang);
       delay(5);
-      result = isBlocked(UB); // 해당 거리에 물체가 있는가?
+      //result = isBlocked(UB); // 해당 거리에 물체가 있는가?
       
       /*
        * 시작 각도에서 초음파 센서의 맨 처음 측정값이 0이 나올 경우를 스킵하기 위한 조건문
@@ -272,9 +276,9 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
 
 /**
  * 시스템 구동시, 모터 초기 각도 계산.
- * tilt : 자이로센서로 구한 지팡이의 기울기의 sin 값
- * hypo: hypotenuse :위에 달린 센서의 빗변 
- * height2 : l*sin(caneTilt) ,높이
+ * tilt : 자이로센서로 구한 sin(지팡이 기울기)
+ * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
+ * height2 : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
  */
 float getStartAng(float r, float tilt)
 {
@@ -302,6 +306,9 @@ float getStartAng(float r, float tilt)
 
 /*
  * 시스템 구동시, 모터 종료 각도 계산
+ * tilt : 자이로센서로 구한 sin(지팡이 기울기)
+ * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
+ * height2 : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
  */
 float getEndAng(float r, float tilt)
 {
@@ -472,7 +479,7 @@ void changeHandleAngle(int pos) {
 /*
  * 위아래, 양옆일때 막혔는지 아닌지 여부 판단
  */
-
+/*
 int isBlocked(int sensorType) {
    float distance= sensingUltra(sensorType);
    //이상한 값이 아니거나 limit보다 장애물과의 거리가 짧으면 1을 리턴한다.
@@ -482,11 +489,33 @@ int isBlocked(int sensorType) {
       return 0;
     }
 }
-
+*/
 /*
  * 초음파 센서의 측정값을 구함
  */
  
+float isBlocked(int sensorType){
+    // 초음파를 보낸다. 다 보내면 echo가 HIGH 상태로 대기하게 된다.
+  digitalWrite(trigPin[sensorType], LOW);
+  digitalWrite(echoPin[sensorType], LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin[sensorType], HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin[sensorType], LOW);
+
+  // echoPin 이 HIGH를 유지한 시간을 저장 한다.
+  unsigned long  mDuration = pulseIn(echoPin[sensorType], HIGH);
+  delayMicroseconds(100);
+  // HIGH 였을 때 시간(초음파가 보냈다가 다시 들어온 시간)을 가지고 거리를 계산 한다.
+  float distance = mDuration / 29.0 / 2.0;
+  
+  if (distance > 2.0 && distance < limit[sensorType]) {
+      return 1;
+    } else {
+      return 0;
+    }
+}
+
 float sensingUltra(int sensorType){
     // 초음파를 보낸다. 다 보내면 echo가 HIGH 상태로 대기하게 된다.
   digitalWrite(trigPin[sensorType], LOW);
@@ -501,9 +530,10 @@ float sensingUltra(int sensorType){
   delayMicroseconds(100);
   // HIGH 였을 때 시간(초음파가 보냈다가 다시 들어온 시간)을 가지고 거리를 계산 한다.
   float distance = mDuration / 29.0 / 2.0;
-
+  
   return distance;
 }
+
 
 void printStr(String head, float value){
    Serial.print(head);
