@@ -287,7 +287,7 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
  * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
  * height2 : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
  */
-float getStartAng(float r, float tilt)
+float getStartAng(int r, float tilt)
 {
   /*
   float height = HYPO_TOP*tilt;
@@ -307,7 +307,14 @@ float getStartAng(float r, float tilt)
   float rad_x = acos(x);
   float ang_x = rad_x / 3.141592654 * 180;
    printStr("startAng",ang_x);
-  return ang_x;
+
+  /*
+  nan(Not a Number) 나오는 경우 시작 각도를 기본 각도로 설정
+  */
+  if(isnan(ang_x)){
+    ang_x = 50;
+  }
+  return ceil(ang_x);
 
 }
 
@@ -317,14 +324,17 @@ float getStartAng(float r, float tilt)
  * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
  * height2 : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
  */
-float getEndAng(float r, float tilt)
+float getEndAng(int r, float tilt)
 {
   float height2 = HYPO_TOP*tilt;
   float z = (180 - height2) / r;
   float rad_z = asin(z);
   float ang_z = rad_z / 3.141592654 * 180;
+  if(isnan(ang_z)){
+    ang_z= 50;
+  }
   printStr("endAng",ang_z+100);
-  return ang_z + 100;
+  return ceil(ang_z) + 100;
 }
 
 /*
@@ -492,21 +502,6 @@ void changeHandleAngle(int pos) {
   }
 }
 
-
-/*
- * 위아래, 양옆일때 막혔는지 아닌지 여부 판단
- */
-/*
-int isBlocked(int sensorType) {
-   float distance= sensingUltra(sensorType);
-   //이상한 값이 아니거나 limit보다 장애물과의 거리가 짧으면 1을 리턴한다.
-   if (distance > 2.0 && distance < limit[sensorType]) {
-      return 1;
-    } else {
-      return 0;
-    }
-}
-*/
 /*
  * 초음파 센서의 측정값을 구함
  */
@@ -527,10 +522,10 @@ float isBlocked(int sensorType){
   float distance = mDuration / 29.0 / 2.0;
   
   if (distance > 2.0 && distance < limit[sensorType]) {
-      Serial.println(1);
+      //Serial.println(1);
       return 1;
     } else {
-      Serial.println(0);
+      //Serial.println(0);
       return 0;
     }
 }
