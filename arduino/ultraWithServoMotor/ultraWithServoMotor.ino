@@ -90,6 +90,9 @@ MPU6050 mpu;
 bool mBreak = true;
 void setup() {
   Serial.begin(9600);
+  // @{
+  // set servo motors for ultrasonography
+  //
   servo[RL].attach(ultraMotorPin[RL]);
   delay(15);
   servo[UB].attach(ultraMotorPin[UB]);
@@ -101,12 +104,21 @@ void setup() {
   delay(15);
   //initGyero();
   delay(15);
-  
+  //
+  // @}
+  //
+
+  // @{
+  // set ultrasonography sensors
+  //
   for (int i = 0 ; i < NUM_ULTRA ; i++) {
     pinMode(trigPin[i], OUTPUT);
     pinMode(echoPin[i], INPUT);
     delay(3);
   }
+  //
+  // @}
+  //
 
   preTime = millis();
 }
@@ -152,10 +164,19 @@ void initGyero(){
  * Loop
 ============================================================================== */
 void loop() {
-  myTimer();
+  startObstacDetect();
 }
 
-void myTimer() {
+void startObstacDetect() {
+  /* @{
+   * startObstacDetect:
+   *  순차적으로 장애물을 감지한다.
+   *  0) 3초 단위로 작업 수행
+   *  1) 내리막길 감지-: isCliff();
+   *  2) 오르막길 감지-: isUpHill();
+   *  3) 단순 장애물 감지: 상하 -> 좌우
+   *  @}
+    */
   currentTime = millis();
   if (currentTime - preTime >= duration) { // 3초마다 모터 움직이도록 조정
    
@@ -251,7 +272,9 @@ bool isCliff(float tilt,float longestHypo){
   return 0;
 }
 
-
+/**
+ * 서보 모터 움직이며 장애물 측정
+ */
 bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
   int sum = 0;
   int result  = 0;
@@ -289,19 +312,6 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
  */
 float getStartAng(int r, float tilt)
 {
-  /*
-  float height = HYPO_TOP*tilt;
-  float x = height / HYPO_TOP;
-  float rad_x = acos(x);
-  float ang_x = rad_x / 3.141592654 * 180;
-
-  float y = height / r;
-  float rad_y = acos(y);
-  float ang_y = rad_y / 3.141592654 * 180;
-  printStr("startAng",ang_y - ang_x);
-  return ang_y - ang_x;
-  */
-
   float height2 = HYPO_TOP*tilt;
   float x = height2 / HYPO_TOP;
   float rad_x = acos(x);
@@ -416,7 +426,6 @@ void checkRightLeft() {
  * SEQUENCE_LIMIT 만큼의 빈칸이 있을 경우, 한 바퀴 도는 것을 멈추고 바로
  * 방향 안내한다.
  */
- 
 int moveUltraMotorRightAndLeft() {
   int angle = GAP_START;
   int start = GAP_START;
@@ -502,10 +511,9 @@ void changeHandleAngle(int pos) {
   }
 }
 
-/*
+/**
  * 초음파 센서의 측정값을 구함
  */
- 
 float isBlocked(int sensorType){
     // 초음파를 보낸다. 다 보내면 echo가 HIGH 상태로 대기하게 된다.
   digitalWrite(trigPin[sensorType], LOW);
@@ -530,6 +538,9 @@ float isBlocked(int sensorType){
     }
 }
 
+/**
+ * 초음파 센서 구동 후 측정 거리 반환
+ */
 float sensingUltra(int sensorType){
     // 초음파를 보낸다. 다 보내면 echo가 HIGH 상태로 대기하게 된다.
   digitalWrite(trigPin[sensorType], LOW);
