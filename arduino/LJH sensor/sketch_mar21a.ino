@@ -326,7 +326,9 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
  */
 float getStartAng(int r, float tilt)
 {
-  float rad_x = acos(tilt);
+  float height2 = HYPO_TOP*tilt;
+  float x = height2 / r;
+  float rad_x = acos(x);
   float ang_x = rad_x / 3.141592654 * 180;
     printStr("이주형 : tilt",tilt);
     printStr("startAng",ang_x);
