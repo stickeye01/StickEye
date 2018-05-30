@@ -193,15 +193,15 @@ void myTimer() {
   if (currentTime - preTime >= duration) { // 3초마다 모터 움직이도록 조정
    
     /*
-     * Hypotenuse,tilt,start Angle, end Angle 구하기
-     * LogestHypo : 가장 위쪽 초음파 센서가 모터와 평행할 때 측정한 땅까지의 거리, 가장 긴 빗변
-     * tilt: sin(degree)값으로 degree는 지팡이의 기울기를 나타낸다.
+     * tilt,start Angle, end Angle 구하기
+     * tilt: 자이로 센서로 구한 지팡이의 기울기(각도º).
     */
-    //float longestHypo = getLongestHypo();
-    float tilt = getTilt(0.0);
-    //float tilt = getTilt(longestHypo);
-    Serial.print("사인값 :");
-    Serial.println(tilt);
+
+    float tilt = getGyroSensorValue();
+    printStr("각도 : ", tilt);
+    printStr("라디안 : ", radians(tilt));
+    printStr("사인값 : ", sin(radians(tilt)));
+
     int startAng = getStartAng(180,tilt);
     int endAng = getEndAng(180,tilt);
      
@@ -211,13 +211,13 @@ void myTimer() {
      * <<알림 코드 아직 추가 X>>
      */
 
-    isCliff(tilt,0.0);
+    isCliff(tilt);
    
     /*
      * 위아래 검사 시 시작 각도와 끝각도를 moveUltraMotorUpAndDown에
      * 넣어줌. startAng, endAng 값이 nan으로 나오는 경우 처리 필요
      * <<코드 아직 추가 X. 일단 20,150으로 고정 값 줌>>
-     */ 
+     */
      
     bool mIsBlocked = moveUltraMotorUpAndDown(startAng, endAng);
 
@@ -233,47 +233,16 @@ void myTimer() {
     preTime = currentTime;
     
   } else {
-   //float tilt = getTilt(0.0);
+   float tilt = getTilt();
   }
 }
 
 /*
- * 위에 달린 센서로 측정한 바닥까지의 빗변 거리를 구함
+ * 자이로 센서로 지팡이의 기울기 구하기
  */
-float getLongestHypo(){
-  servo[UB].write(0);
-  delay(15);
-  float val;
-  val =  sensingUltra(UB);
-  printStr("Longest Hypo",val);
-  return val;
-}
-
-/*
- * 지팡이의 기울기 구하기 - Sin(degree)
- * longestHypo : 위아래 장애물을 감지하는 센서로 측정한 센서와 바닥까지의 빗변거리
- * HYPO_BOTTOM : 바닥과의 직선거리를 측정하는 아래쪽 센서의 지팡이 상의 위치
- * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
- * height1 : 아래 달린 센서로 측정한 지팡이와 바닥의 직각 거리
- * 리턴 되는 값은 sin(지팡이의 기울기 각도)
- */
-float getTilt(float longestHypo){
+float getTilt(){
     float tilt = getGyroSensorValue();
-    /*
-   float height1 = sensingUltra(B);
-   if(height1 >= 3000 || height1 <= 2){
-    // 값이 이상할 때
-    Serial.println("바닥 직각 거리 이상");
-    return height1;
-   }
-   */
-   
-   //printStr("Bottom, height : ", height1);
-   //return height1/(longestHypo-HYPO_TOP+HYPO_BOTTOM);
-   printStr("각도 : ", tilt);
-   printStr("라디안 : ", radians(tilt));
-   printStr("라디안 : ", sin(radians(tilt)));
-   return sin(radians(tilt));
+    return sin(radians(tilt));
 }
 
 /*
@@ -283,7 +252,7 @@ float getTilt(float longestHypo){
  *  (i)  height1 + x = height2  ………………일반 보행길
  *  (ii) height1 + x > height2  ………………낭떠러지
  */
-void isCliff(float tilt,float longestHypo){
+void isCliff(float tilt){
   
   /*
    * 초음파센서 이용
@@ -294,7 +263,8 @@ void isCliff(float tilt,float longestHypo){
   printStr("1 ",height1+x);
   printStr("2 ",height2);
   */
-
+  
+   
   /*  자이로 센서 */
   float height = tilt * HYPO_BOTTOM;
   float actualHeight =  sensingUltra(B);
@@ -310,6 +280,17 @@ void isCliff(float tilt,float longestHypo){
     Serial.println("위험 ! 낭떠러지");
   }
 }
+void check(int tilt){
+  servo[2].write(0);
+  int dist1 = sensingUltra(UB) * sin(radians(tilt));
+  
+  int degree = 110 - tilt;
+  
+  servo[2].write(20);
+  int dist2 = sensingUltra(UB) *cos(radians(degree));
+  Serial.println();
+  
+}
 
 
 bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
@@ -318,7 +299,7 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
   if (startAngle <= maxAngle || startAngle >= 0)
   {
     for (int ang = startAngle; ang < endAngle; ang++) // for문을 돌며 모터 각도를 설정.
-    {
+    {      
       servo[UB].write(ang);
       delay(5);
       result = isBlocked(UB); // 해당 거리에 물체가 있는가?
@@ -343,9 +324,9 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
 
 /**
  * 시스템 구동시, 모터 초기 각도 계산.
- * tilt : 자이로센서로 구한 sin(지팡이 기울기)
+ * tilt : 자이로센서로 구한 지팡이 기울기(각도º)
  * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
- * height2 : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(cane)
+ * height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(cane)
 )
 
  */
@@ -364,9 +345,9 @@ float getStartAng(int r, float tilt)
   printStr("startAng",ang_y - ang_x);
   return ang_y - ang_x;
   */
-
-  float height2 = HYPO_TOP*tilt;
-  float x = height2 / HYPO_TOP;
+  
+  float height = HYPO_TOP * sin(radians(tilt));
+  float x = height / HYPO_TOP;
   float rad_x = acos(x);
   float ang_x = rad_x / 3.141592654 * 180;
    printStr("startAng",ang_x);
@@ -378,21 +359,21 @@ float getStartAng(int r, float tilt)
     ang_x = 50;
   }
   return ceil(ang_x);
-
 }
 
 /*
  * 시스템 구동시, 모터 종료 각도 계산
- * tilt : 자이로센서로 구한 sin(지팡이 기울기)
+ * tilt : 자이로센서로 구한 지팡이 기울기(각도º)
  * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
- * height2 : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
+ * height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
  */
 float getEndAng(int r, float tilt)
 {
-  float height2 = HYPO_TOP*tilt;
-  float z = (180 - height2) / r;
+  float height = HYPO_TOP*sin(radians(tilt));
+  float z = (180 - height) / r;
   float rad_z = asin(z);
   float ang_z = rad_z / 3.141592654 * 180;
+  
   if(isnan(ang_z)){
     ang_z= 50;
   }
@@ -446,9 +427,7 @@ float getGyroSensorValue(){
         mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
         delay(1);
     } 
-    Serial.print("ypr[2] = ");
-    Serial.println(ypr[2] * 180/M_PI);
-    return (ypr[2] + 180/M_PI);
+    return (ypr[2] * 180/M_PI);
 }
 
 /**
