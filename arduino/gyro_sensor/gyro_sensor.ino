@@ -183,6 +183,8 @@ void setup() {
     Serial.println(F("Initializing I2C devices..."));
     mpu.initialize();
 
+   pinMode(2, INPUT);
+
     // verify connection
     Serial.println(F("Testing device connections..."));
     Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
@@ -210,8 +212,8 @@ void setup() {
         mpu.setDMPEnabled(true);
 
         // enable Arduino interrupt detection
-        Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
-        attachInterrupt(0, dmpDataReady, RISING);
+        Serial.println(F("Enabling interrupt detection (Arduino external interrupt 2)..."));
+        attachInterrupt(digitalPinToInterrupt(2), dmpDataReady, RISING);
         mpuIntStatus = mpu.getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
