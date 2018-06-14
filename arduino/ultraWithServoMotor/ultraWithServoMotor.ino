@@ -2,13 +2,37 @@
    arduino mini's PMW pins (d3,d5,d6,d9,d10,d11)
 */
 #include <Servo.h>
+#include <Wire.h>
+#include <Kalman.h> //Source: https://github.com/TKJElectronics/
+//#define RESTRICT_PITCH // Comment out to restrict roll to ±90deg instead - please read: http://www.freescale.com/files/sensors/doc/app_note/AN3461.pdf
+
+//Kalman kalmanX; // Create the Kalman instances
+//Kalman kalmanY;
+/* IMU Data */
+//double accX, accY, accZ;
+//double gyroX, gyroY, gyroZ;
+//int16_t tempRaw;
+
+//double gyroXangle, gyroYangle; // Angle calculate using the gyro only
+//double compAngleX, compAngleY; // Calculated angle using a complementary
+ 
+/*  
+ *  kalAngleX값은 roll(좌우의 기울기). 초음파 센서의 기울어짐으로 인한 이상값 측정을 보정하기 위해 사용. 초음파 센서가 항상 정면의 위아래를 측정하도록 유도.
+ *  kalAngleY값은 pitch(위아래 기울기). 지팡이의 기울기(tilt)
+*/
+//double kalAngleX, kalAngleY; // Calculated angle using a Kalman filter (X : roll(좌우), Y : pitch(위아래))
+
+//uint32_t timer;
+//uint8_t i2cData[14]; // Buffer for I2C data
+
+/*
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
-
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     #include "Wire.h"
 #endif
 #define OUTPUT_READABLE_YAWPITCHROLL
+*/
 
 #define RIGHT 70
 #define LEFT 110
@@ -24,7 +48,7 @@
 #define NUM_ULTRA 3
 #define RL 0 // Right and left
 #define UB 1 // Uppder and Bottom
-#define B 2 //Bottom
+#define C 2 //Bottom
 
 #define HYPO_BOTTOM 19 //바닥 측정을 위해 달린 초음파 센서의 지팡이 상의 빗변 길이
 #define HYPO_TOP 45 //위에 달린 초음파 센서의 지팡이 상의 빗변 길이
@@ -40,7 +64,7 @@ const int vibrationPin = A1;
 // index 0은 좌/우 측정, 1은 상/하 측정에 사용.
 const int limit[] = {60, 80};
 
-const int ultraMotorPin[] = {A2, A3};
+const int servoMotorPin[]=  {A2, A3, A1};
 const int echoPin[] = {11,9,3};
 const int trigPin[] = {10,6,5};
 
@@ -49,9 +73,8 @@ float distance[2] = {0}; //장애물과의 거리: index 0은 좌/우 측정, 1�
 // 회전 가능 각도 (최대/최소)
 int minAngle = 100;
 int maxAngle = 180;
-int toStickFromBottom = 0; // 지팡이와 바닥까지의 거리
 
-Servo servo[2];
+Servo servo[3];
 Servo handle;
 
 int handleAngle = CENTER; // 초기 지팡이 핸들 각도: 기본 센터,
@@ -72,7 +95,7 @@ unsigned int duration = 3000;
   INT : D2
   x : roll
   =====================================================*/
-//인터럽트핀 
+/*인터럽트핀 
 #define INTERRUPT_PIN 2 
 
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
@@ -86,27 +109,33 @@ Quaternion q;           // [w, x, y, z]
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 VectorFloat gravity;    // [x, y, z]            gravity vector
 MPU6050 mpu;
-
+*/
+/*
 volatile bool mpuInterrupt = false; 
 //인터럽트 발생 시 호출되는 함수
 void dmpDataReady() {
     mpuInterrupt = true;
 }
+*/
 
 /*===================================================
   setup
   =====================================================*/
-bool mBreak = true;
+
 void setup() {
   Serial.begin(9600);
   // @{
   // set servo motors for ultrasonography
   //
-  servo[RL].attach(ultraMotorPin[RL]);
-  delay(15);
-  servo[UB].attach(ultraMotorPin[UB]);
-  delay(15);
+  for(int i = 0 ; i<3 ; i++){
+    servo[i].attach(servoMotorPin[i]); //A2,A3,A1
+    delay(15);
+  }
+  //init
+  servo[C].write(90);
+  delay(15); 
   servo[UB].write(0);
+  delay(15);
   handle.attach(handleMotorPin);
   delay(15);
   handle.write(handleAngle);
@@ -128,13 +157,14 @@ void setup() {
   //
   // @}
   //
+  // 칼만 필터에서 사용 되는 타이머
 
   preTime = millis();
 }
 
 /*
  * 자이로 센서 초기화
- */
+
 void initGyro(){
    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
         Wire.begin();
@@ -189,7 +219,7 @@ void initGyro(){
         Serial.println(F(")"));
     }   
 }
-
+ */
 
 /*===========================================================================
  * Loop
@@ -210,23 +240,21 @@ void startObstacDetect() {
     */
   currentTime = millis();
   if (currentTime - preTime >= duration) { // 3초마다 모터 움직이도록 조정
-   
     /*
      * tilt,start Angle, end Angle 구하기
      * tilt: 자이로 센서로 구한 지팡이의 기울기(각도º).
     */
-
-    float tilt = getGyroSensorValue();
+    rotateServoMotorForwards();
+    double roll = ceil(getRoll());
+    float tilt = sin(radians(roll));    
+    printStr("각도 : ", roll);
     printStr("각도 : ", tilt);
-    printStr("라디안 : ", radians(tilt));
-    printStr("사인값 : ", sin(radians(tilt)));
-
+    
     int startAng = getStartAng(180,tilt);
     int endAng = getEndAng(180,tilt);
    
-   checkSlope(tilt,ceil(startAng));
-     
-    bool mIsBlocked = moveUltraMotorUpAndDown(startAng, endAng);
+    //checkSlope(tilt,ceil(startAng));
+    bool mIsBlocked = moveUltraMotorUpAndDown_1(startAng, endAng,tilt);
 
     //위아래 측정시 영역안에 장애물이 한개라도 있을 경우 true 아니면 false
     if (mIsBlocked) {
@@ -235,47 +263,69 @@ void startObstacDetect() {
       Serial.println("중앙");
       changeHandleAngle(CENTER);
     }
-    
     delayMicroseconds(10);
     preTime = currentTime;
     
   } else {
-   float tilt = getTilt();
+   updateGyroValue();
   }
 }
 
-/*
- * 자이로 센서로 지팡이의 기울기 구하기
- */
-float getTilt(){
-    float tilt = getGyroSensorValue();
-    return sin(radians(tilt));
+
+/**
+ * 시스템 구동시, 모터 초기 각도 계산.
+ * tilt : 자이로센서로 구한 지팡이 기울기(각도º)
+ * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
+ * height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(cane)
+)
+*/
+ 
+float getStartAng(int r, float tilt)
+{
+  float height = HYPO_TOP * sin(radians(tilt));
+  float x = height / HYPO_TOP;
+  float rad_x = acos(x);
+  float ang_x = rad_x / 3.141592654 * 180;
+  printStr("startAng",ang_x); 
+  return ang_x;
 }
 
 /*
- * 아래 급격한 경사가 있는지 없는지 판단
- * height1 : 아래 달린 센서의 바닥과의 직각 거리 (높이)
- * height2 : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이)
- *  (i)  height1 + x = height2  ………………일반 보행길
- *  (ii) height1 + x > height2  ………………낭떠러지
+ * 시스템 구동시, 모터 종료 각도 계산
+ * tilt : 자이로센서로 구한 지팡이 기울기(각도º)
+ * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
+ * height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
  */
-void isCliff(float tilt){
+float getEndAng(int r, float tilt)
+{
+  float height = HYPO_TOP*sin(radians(tilt));
+  float z = (180 - height) / r;
+  float rad_z = asin(z);
+  float ang_z = rad_z / 3.141592654 * 180;
   
-  /*  자이로 센서 */
-  float height = tilt * HYPO_BOTTOM;
-  float actualHeight =  sensingUltra(B);
-  printStr("height :  ",height);
-  printStr("actualHeight :  ",actualHeight);
-  
-  /*
-   * height1과 height2의 차이가 Gap 보다 클 경우
-   * return -1 : 낭떠러지
-   * <<코드 아직 추가 X>>
-   */
-  if(abs(height - actualHeight)>=10){
-    Serial.println("위험 ! 낭떠러지");
+  if(isnan(ang_z)){
+    ang_z= 50;
   }
+  printStr("endAng",ang_z+100);
+  return ceil(ang_z) + 100;
 }
+
+
+void rotateServoMotorForwards(){
+     updateGyroValue();
+     double pitch = ceil(getPitch());
+     if(abs(pitch) >= 2){
+        int currentServoAng = servo[C].read();
+        if(currentServoAng - pitch > 0 and currentServoAng - pitch <180){
+               currentServoAng = currentServoAng - pitch;
+               servo[C].write(currentServoAng);
+               delay(20);
+               Serial.println("current angle = "+String(currentServoAng));
+               updateGyroValue();
+          }
+     }
+}
+
 /* 바닥에 경사 확인
  * startAng까지 앞 쪽에 낭떠러지가 있는지 확인한다.
 */
@@ -347,6 +397,56 @@ void checkSlope(int tilt,int startAng){
  * 서보 모터 움직이며 장애물 측정
  */
  
+
+bool moveUltraMotorUpAndDown_1(int startAngle, int endAngle, int tilt){
+  int sum = 0;
+  int result  = 0;
+  int degree;
+  float hypo;
+  float height;
+  if (startAngle <= maxAngle || startAngle >= 0)
+  {
+    for (int ang = 0 ; ang < endAngle; ang++) // for문을 돌며 모터 각도를 설정.
+    {      
+      if(ang % 3 == 0){//3번에 한번씩 정면 보도록 중앙 서보모터 움직임
+        rotateServoMotorForwards();
+      }
+      servo[UB].write(ang);
+      delay(5);
+
+      //======================================================================
+      // 0도에서 시작각도 전까지 앞에 낭떠리지 검사
+       if(ang < startAngle){ 
+          degree = 90 - tilt + ang;
+          hypo = sensingUltra(UB); 
+          height = hypo *cos(radians(degree));
+          delay(1);
+          Serial.println("hypo="+String(hypo));
+         // Serial.println("height="+String(height));
+       
+      //======================================================================
+      //시작각도 ~ 끝 각도까지 전방 장애물 검사
+       }else if(ang >= startAngle){ 
+          result = isBlocked(UB); // 해당 거리에 물체가 있는가?
+        // 시작 각도에서 초음파 센서의 맨 처음 측정값이 0이 나올 경우를 스킵하기 위한 조건문
+        // 시작 각도에서는 무조건 pass
+        if (result == 1 &&  ang != startAngle) {   
+          return true;
+        }
+      }
+    }
+    Serial.println();
+    
+    for (int ang = endAngle; ang >= startAngle; ang--) 
+    {
+      servo[UB].write(ang);
+      delay(5);
+    }
+  }
+  return false;
+}
+
+ 
 bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
   int sum = 0;
   int result  = 0;
@@ -375,115 +475,6 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle){
   }
   return false;
 }
-
-/**
- * 시스템 구동시, 모터 초기 각도 계산.
- * tilt : 자이로센서로 구한 지팡이 기울기(각도º)
- * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
- * height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(cane)
-)
- */
- 
-float getStartAng(int r, float tilt)
-{
-   /*
-  float height = HYPO_TOP*tilt;
-  float x = height / HYPO_TOP;
-  float rad_x = acos(x);
-  float ang_x = rad_x / 3.141592654 * 180;
-
-  float y = height / r;
-  float rad_y = acos(y);
-  float ang_y = rad_y / 3.141592654 * 180;
-  printStr("startAng",ang_y - ang_x);
-  return ang_y - ang_x;
-  */
-  
-  float height = HYPO_TOP * sin(radians(tilt));
-  float x = height / HYPO_TOP;
-  float rad_x = acos(x);
-  float ang_x = rad_x / 3.141592654 * 180;
-   printStr("startAng",ang_x);
-
-  /*
-  nan(Not a Number) 나오는 경우 시작 각도를 기본 각도로 설정
-  */
-  if(isnan(ang_x)){
-    ang_x = 50;
-  }
-  return ceil(ang_x);
-}
-
-/*
- * 시스템 구동시, 모터 종료 각도 계산
- * tilt : 자이로센서로 구한 지팡이 기울기(각도º)
- * HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
- * height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
- */
-float getEndAng(int r, float tilt)
-{
-  float height = HYPO_TOP*sin(radians(tilt));
-  float z = (180 - height) / r;
-  float rad_z = asin(z);
-  float ang_z = rad_z / 3.141592654 * 180;
-  
-  if(isnan(ang_z)){
-    ang_z= 50;
-  }
-  printStr("endAng",ang_z+100);
-  return ceil(ang_z) + 100;
-}
-
-/*
- * 자이로 센서
- * ypr[0] : yaw / ypr[1] : pitch / ypr[2]: roll의 값을 구함.
- * 3값 중 roll 값을 지팡이의 기울기 값으로 사용.
- */
-float getGyroSensorValue(){
-    if(!dmpReady){
-        return 38.0;
-    }
-   
-   // 위에서 인터럽트와 연결된 함수에서 mpuInterrupt변수를 설정하는데
-   // 이곳에선 그 변수를 기다리다가 인터럽트가 발생하면 다음으로 넘어가게 
-   // 구성되어 있다.
-     while (!mpuInterrupt && fifoCount < packetSize);
-     
-    //인터럽트 변수 초기화
-    mpuInterrupt = false;
-    //mpu6050 상태 읽기
-     mpuIntStatus = mpu.getIntStatus();
-    delay(1);
-    // FIFO 버퍼 개수 얻기
-    fifoCount = mpu.getFIFOCount();
-    delay(1);
-    // check for overflow (this should never happen unless our code is too inefficient)
-    if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
-        // reset so we can continue cleanly
-        mpu.resetFIFO();
-       // Serial.println("FIFO overflow");
-        // otherwise, check for DMP data ready interrupt (this should happen frequently)
-    } else if (mpuIntStatus & 0x02) {
-        //packetSize만큼 fifo가 들어올 떄 까지 대기하기
-        while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
-        delay(1);
-        //데이터 받아오기
-        mpu.getFIFOBytes(fifoBuffer, packetSize);
-        
-        // track FIFO count here in case there is > 1 packet available
-        // (this lets us immediately read more without waiting for an interrupt)
-        fifoCount -= packetSize;
-        
-        // 값 얻어오기
-        mpu.dmpGetQuaternion(&q, fifoBuffer);
-        mpu.dmpGetGravity(&gravity, &q);
-        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-        delay(1);
-    }
-    Serial.println("ypr[0] "+ String(ypr[0])+ "ypr[1] " + String(ypr[1]));
-    return (ypr[2] * 180/M_PI);
-}
-
 /**
  * 좌/우 방향 판단 (optimized version).
  * 현재는 아무것도 안하고 serial print로 출력함.
@@ -628,7 +619,7 @@ float isBlocked(int sensorType){
 
   // echoPin 이 HIGH를 유지한 시간을 저장 한다.
   unsigned long  mDuration = pulseIn(echoPin[sensorType], HIGH);
-  delayMicroseconds(1000);
+  delayMicroseconds(100);
   // HIGH 였을 때 시간(초음파가 보냈다가 다시 들어온 시간)을 가지고 거리를 계산 한다.
   float distance = mDuration / 29.0 / 2.0;
   
@@ -655,8 +646,8 @@ float sensingUltra(int sensorType){
 
   // echoPin 이 HIGH를 유지한 시간을 저장 한다.
   unsigned long  mDuration = pulseIn(echoPin[sensorType], HIGH);
-  Serial.println("Duration: "+String(mDuration));
-  delay(1000);
+  //Serial.println("Duration: "+String(mDuration));
+  delay(100);
   // HIGH 였을 때 시간(초음파가 보냈다가 다시 들어온 시간)을 가지고 거리를 계산 한다.
   float distance = mDuration / 29.0 / 2.0;
   
