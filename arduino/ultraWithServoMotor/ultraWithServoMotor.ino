@@ -14,7 +14,7 @@
   INT : D2
   x : roll
   =====================================================*/
-  
+
 #define RIGHT 70
 #define LEFT 110
 #define CENTER 90
@@ -84,6 +84,7 @@ void setup() {
     delay(15);
   }
   //init
+
   servo[C].write(90);
   delay(15);
   servo[UB].write(0);
@@ -133,25 +134,29 @@ void startObstacDetect() {
   */
   currentTime = millis();
   if (currentTime - preTime >= duration) { // 3초마다 모터 움직이도록 조정
-    rotateServoMotorForwards();
+
     double roll = ceil(getRoll());
-    printStr("각도 : ", roll);
+
+    //printStr("각도 : ", roll);
 
     int startAng = getStartAng(180, roll);
     int endAng = getEndAng(180, roll);
+    updateGyroValue();
+    printStr("pitch 각도 : ", getPitch());
+    printStr("servo : ", servo[C].read());
+
 
     bool mIsBlocked = moveUltraMotorUpAndDown_1(startAng, endAng, roll);
-      
-      //위아래 측정시 영역안에 장애물이 한개라도 있을 경우 true 아니면 false
-      if (mIsBlocked) {
+    //위아래 측정시 영역안에 장애물이 한개라도 있을 경우 true 아니면 false
+    if (mIsBlocked) {
       checkRightLeft();
-      } else {
+    } else {
       Serial.println("중앙");
       changeHandleAngle(CENTER);
-      }
-      delayMicroseconds(10);
-      preTime = currentTime;
-      
+    }
+    delayMicroseconds(10);
+    preTime = currentTime;
+
   } else {
     updateGyroValue();
   }
@@ -171,7 +176,7 @@ float getStartAng(int r, float tilt)
   float x = height / HYPO_TOP;
   float rad_x = acos(x);
   float ang_x = rad_x / 3.141592654 * 180;
-  printStr("startAng", ang_x);
+  //printStr("startAng", ang_x);
   return ang_x;
 }
 
@@ -191,7 +196,7 @@ float getEndAng(int r, float tilt)
   if (isnan(ang_z)) {
     ang_z = 50;
   }
-  printStr("endAng", ang_z + 100);
+  //printStr("endAng", ang_z + 100);
   return ceil(ang_z) + 100;
 }
 
@@ -199,7 +204,7 @@ float getEndAng(int r, float tilt)
 void rotateServoMotorForwards() {
   updateGyroValue();
   double pitch = ceil(getPitch());
-  if (abs(pitch) >= 2) {
+  if (abs(pitch) >= 10) {
     int currentServoAng = servo[C].read();
     if (currentServoAng - pitch > 0 and currentServoAng - pitch < 180) {
       currentServoAng = currentServoAng - pitch;
@@ -216,43 +221,45 @@ void rotateServoMotorForwards() {
 */
 bool moveUltraMotorUpAndDown_1(int startAngle, int endAngle, int tilt) {
   int result  = 0;
-  
+
   //========== 낭떠러지 검사 =============//
-  int boundary = tilt/2; //낭떠러지 검사시 기울어짐으로 인한 초음파 센서 이상값 발생을 막기 위해 측정 바운더리 지정
+  int boundary = tilt / 2; //낭떠러지 검사시 기울어짐으로 인한 초음파 센서 이상값 발생을 막기 위해 측정 바운더리 지정
   int count = 0; // 낭떠러지 검사 시 낭떠러지로 추정되는 값이 4개 이상 나와야 낭떠러지로 판단함
   float preDistance = 0;
-  float distance = 0; //거리 
+  float distance = 0; //거리
   //====================================//
-    
+  rotateServoMotorForwards();
+
   if (startAngle <= maxAngle || startAngle >= 0)
   {
-    updateGyroValue();
+
     for (int ang = 0 ; ang < endAngle; ang++) // for문을 돌며 모터 각도를 설정.
     {
-      if (ang % 4 == 0) { //4번에 한번씩 정면 보도록 중앙 서보모터 움직임
+      updateGyroValue();
+      if (ang % 5 == 0) { //4번에 한번씩 정면 보도록 중앙 서보모터 움직임
         rotateServoMotorForwards();
-      } 
-       
+      }
+
       servo[UB].write(ang);
       delay(5);
-       //========== 낭떠러지 검사 =============//
+      //========== 낭떠러지 검사 =============//
       // 0도에서 boundary(tilt/2)까지 앞에 낭떠리지 검사 : tilt/2이상일때 기울어짐으로 초음파 값 제대로 측정 안됨.
       if (ang < boundary) {
-        distance = sensingUltra(UB); 
-        count = checkSlope(ang, tilt, count ,preDistance, distance);
-        if ( count == 0  || preDistance == 0){
-          preDistance = distance; 
-        }else{
-          Serial.println("카운트 중입니다.. count = "+ String(count));
+        distance = sensingUltra(UB);
+        count = checkSlope(ang, tilt, count , preDistance, distance);
+        if ( count == 0  || preDistance == 0) {
+          preDistance = distance;
+        } else {
+          Serial.println("낭떠러지 카운트 중입니다.. count = " + String(count));
         }
-      //=======================================//
-       //========== 전방 장애물 검사 =============//
+        //=======================================//
+        //========== 전방 장애물 검사 =============//
       } else if (ang >= startAngle) {
-        result = isBlocked(UB);  //해당 거리에 물체가 있는가?
-        // 시작 각도에서 초음파 센서의 맨 처음 측정값이 0이 나올 경우를 스킵하기 위한 조건문
-        // 시작 각도에서는 무조건 pass
-        if (result == 1 &&  ang != startAngle) {
-          return true;
+          result = isBlocked(UB);  //해당 거리에 물체가 있는가?
+          // 시작 각도에서 초음파 센서의 맨 처음 측정값이 0이 나올 경우를 스킵하기 위한 조건문
+          // 시작 각도에서는 무조건 pass
+          if (result == 1 &&  ang != startAngle) {
+              return true;
         }
       }
     }
@@ -264,23 +271,23 @@ bool moveUltraMotorUpAndDown_1(int startAngle, int endAngle, int tilt) {
 /* 바닥에 경사 확인
    startAng까지 앞 쪽에 낭떠러지가 있는지 확인한다.
 */
-int checkSlope(int ang, int tilt, int count, float preDistance , float currDistance ){
-    /*전값과의 차이가 +15 이상일때 낭떠러지 구간을 측정
-       count 중 일 때는 preHeight을 갱신하지 않는다.*/
-   int degree = 90 - tilt + ang; 
+int checkSlope(int ang, int tilt, int count, float preDistance , float currDistance ) {
+  /*전값과의 차이가 +15 이상일때 낭떠러지 구간을 측정
+     count 중 일 때는 preHeight을 갱신하지 않는다.*/
+  int degree = 90 - tilt + ang;
 
-   float preHeight = preDistance * cos(radians(degree)); //지팡이에서 땅까지의 직각거리
-   float currHeight = currDistance * cos(radians(degree)); //지팡이에서 땅까지의 직각거리
-   Serial.println("1.."+String(degree)+"일때 "+String(currHeight) +"cm");
-   if ((currHeight - preHeight) > 20) {
-        if(count > 4) {
-            Serial.println(".......낭떠러지");
-            return 0;
-        }
-        // if(count == 0 ) Serial.println("...... 카운트 시작");
-        return count+1;
+  float preHeight = preDistance * cos(radians(degree)); //지팡이에서 땅까지의 직각거리
+  float currHeight = currDistance * cos(radians(degree)); //지팡이에서 땅까지의 직각거리
+  Serial.println("1.." + String(degree) + "일때 " + String(currHeight) + "cm");
+  if ((currHeight - preHeight) > 20) {
+    if (count > 4) {
+      Serial.println(".......낭떠러지");
+      return 0;
     }
-    return 0;
+    // if(count == 0 ) Serial.println("...... 카운트 시작");
+    return count + 1;
+  }
+  return 0;
 }
 
 bool moveUltraMotorUpAndDown(int startAngle, int endAngle) {
@@ -333,18 +340,18 @@ void checkRightLeft() {
   }
 }
 
-void alram(){
-      //진동모터 알림
-      /*
-      analogWrite(vibrationPin,150);
-      delay(10);
-      analogWrite(vibrationPin,150);
-      delay(100);
-      analogWrite(vibrationPin,150);
-      delay(10);
-      analogWrite(vibrationPin,150);
-      delay(100);
-    */
+void alram() {
+  //진동모터 알림
+  /*
+    analogWrite(vibrationPin,150);
+    delay(10);
+    analogWrite(vibrationPin,150);
+    delay(100);
+    analogWrite(vibrationPin,150);
+    delay(10);
+    analogWrite(vibrationPin,150);
+    delay(100);
+  */
 }
 
 /**
@@ -490,14 +497,14 @@ float sensingUltra(int sensorType) {
   return distance;
 }
 /*
-int analogUltra() {
+  int analogUltra() {
   int d = analogRead(sensorPin);
   delay(100);
   // int cm = (d / 2) *2.4;
   int cm = d / 4.883 ;
   //Serial.println(String(d) + "mv, " + String(cm) + "cm");
   return d;
-}
+  }
 */
 
 void printStr(String head, float value) {
