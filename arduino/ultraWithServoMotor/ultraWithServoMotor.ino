@@ -138,8 +138,15 @@ void startObstacDetect() {
 
     //printStr("각도 : ", roll);
     updateGyroValue();
-    int startAng = getStartAng(180, roll);
-    int endAng = getEndAng(180, roll);
+    
+    servo[UB].write(0);
+    float Hypo_ground = sensingUltra(UB);
+    if(Hypo_ground > 130)
+        Hypo_ground=75;
+ 
+    int startAng = getStartAng(180,Hypo_ground, roll);
+    int endAng = getEndAng(180,Hypo_ground, roll);
+   
     
     printStr("pitch 각도 : ", getPitch());
     printStr("servo : ", servo[C].read());
@@ -166,15 +173,18 @@ void startObstacDetect() {
    tilt : 자이로센서로 구한 지팡이 기울기(각도º)
    HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
    height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(cane)
+   Hypo_ground : 서보모터가 0도일 때의 상/하 초음파 센서의 측정 거리
+   
 */
 
-float getStartAng(int r, float tilt)
+float getStartAng(int r, float Hypo_ground,  float tilt)
 {
-  float height = HYPO_TOP * sin(radians(tilt));
-  float x = height / HYPO_TOP;
+  float height = Hypo_ground * sin(radians(tilt));
+  float x = height / r;
   float rad_x = acos(x);
   float ang_x = rad_x / 3.141592654 * 180;
-  return ang_x;
+  float ang_start=ang_x-(90-tilt);
+  return ang_start;
 }
 
 /*
@@ -182,15 +192,18 @@ float getStartAng(int r, float tilt)
    tilt : 자이로센서로 구한 지팡이 기울기(각도º)
    HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
    height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
+   Hypo_ground : 서보모터가 0도일 때의 상/하 초음파 센서의 측정 거리
 */
-float getEndAng(int r, float tilt)
+float getEndAng(int r, float Hypo_ground, float tilt)
 {
-  float height = HYPO_TOP * sin(radians(tilt));
+  float height = Hypo_ground * sin(radians(tilt));
   float z = (180 - height) / r;
   float rad_z = asin(z);
   float ang_z = rad_z / 3.141592654 * 180;
 
-  return ceil(ang_z) + 100;
+  float ang_end=ang_z+tilt;
+  
+  return ang_end;
 }
 
 
