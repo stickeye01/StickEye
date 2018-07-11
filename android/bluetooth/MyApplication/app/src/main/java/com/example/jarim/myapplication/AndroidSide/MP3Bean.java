@@ -117,23 +117,61 @@ public class MP3Bean extends AppBean {
     /**
      * get music lists that are saved in the phone.
      */
-    private void getMusicList() {
+    private class SongDetails {
+        String songTitle = "";
+        String songArtist = "";
+        //song location on the device
+        String songData = "";
+    }
+
+    private void getMusicList()  {
+        //creating selection for the database
+        String selection = MediaStore.Audio.Media.IS_MUSIC + " != 0";
         String[] projection = {MediaStore.Audio.Media._ID,
                 MediaStore.Audio.Media.ALBUM_ID, MediaStore.Audio.Media.TITLE,
                 MediaStore.Audio.Media.ARTIST};
 
-        Cursor cursor = mContext.getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                projection, null, null, null);
-        while (cursor.moveToNext()) {
-            MusicDto musicDto = new MusicDto();
-            musicDto.setId(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media._ID)));
-            musicDto.setAlbumId(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID)));
-            musicDto.setTitle(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE)));
-            musicDto.setArtist(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST)));
-            list.add(musicDto);
+        //creating sort by for database
+        final String sortOrder = MediaStore.Audio.AudioColumns.TITLE
+                + " COLLATE LOCALIZED ASC";
+
+        //stating pointer
+        Cursor cursor = null;
+
+        try {
+            //the table for query
+            Uri uri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+            // query the db
+            cursor = mContext.getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    projection, null, null, null);
+            if (cursor != null) {
+
+                //create array for incoming songs
+                ArrayList<SongDetails> songs = new ArrayList<SongDetails>(cursor.getCount());
+
+                //go to the first row
+                cursor.moveToFirst();
+
+                SongDetails details;
+
+                while (cursor.moveToNext()) {
+                    MusicDto musicDto = new MusicDto();
+                    musicDto.setId(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media._ID)));
+                    musicDto.setAlbumId(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID)));
+                    musicDto.setTitle(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE)));
+                    musicDto.setArtist(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST)));
+                    list.add(musicDto);
+                }
+            }
+        } catch (Exception ex) {
+
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
-        cursor.close();
     }
+
 
     /**
      * play music.
