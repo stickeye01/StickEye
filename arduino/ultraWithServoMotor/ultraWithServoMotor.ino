@@ -68,8 +68,6 @@ unsigned long preTime = 0;
 unsigned long  currentTime = 0;
 unsigned int duration = 3000;
 
-
-
 /*===================================================
   setup
   =====================================================*/
@@ -83,8 +81,9 @@ void setup() {
     servo[i].attach(servoMotorPin[i]); //A2,A3,A1
     delay(15);
   }
+  //init vibration motor pin
+  pinMode( 6 , OUTPUT);
   //init
-
   servo[C].write(90);
   delay(15);
   servo[UB].write(0);
@@ -138,14 +137,20 @@ void startObstacDetect() {
     double roll = ceil(getRoll());
 
     //printStr("각도 : ", roll);
-
-    int startAng = getStartAng(180, roll);
-    int endAng = getEndAng(180, roll);
     updateGyroValue();
+    
+    servo[UB].write(0);
+    float Hypo_ground = sensingUltra(UB);
+    if(Hypo_ground > 130)
+        Hypo_ground=75;
+ 
+    int startAng = getStartAng(180,Hypo_ground, roll);
+    int endAng = getEndAng(180,Hypo_ground, roll);
+   
+    
     printStr("pitch 각도 : ", getPitch());
     printStr("servo : ", servo[C].read());
-
-
+   
     bool mIsBlocked = moveUltraMotorUpAndDown_1(startAng, endAng, roll);
     //위아래 측정시 영역안에 장애물이 한개라도 있을 경우 true 아니면 false
     if (mIsBlocked) {
@@ -168,16 +173,18 @@ void startObstacDetect() {
    tilt : 자이로센서로 구한 지팡이 기울기(각도º)
    HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
    height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(cane)
+   Hypo_ground : 서보모터가 0도일 때의 상/하 초음파 센서의 측정 거리
+   
 */
 
-float getStartAng(int r, float tilt)
+float getStartAng(int r, float Hypo_ground,  float tilt)
 {
-  float height = HYPO_TOP * sin(radians(tilt));
-  float x = height / HYPO_TOP;
+  float height = Hypo_ground * sin(radians(tilt));
+  float x = height / r;
   float rad_x = acos(x);
   float ang_x = rad_x / 3.141592654 * 180;
-  //printStr("startAng", ang_x);
-  return ang_x;
+  float ang_start=ang_x-(90-tilt);
+  return ang_start;
 }
 
 /*
@@ -185,19 +192,18 @@ float getStartAng(int r, float tilt)
    tilt : 자이로센서로 구한 지팡이 기울기(각도º)
    HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
    height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
+   Hypo_ground : 서보모터가 0도일 때의 상/하 초음파 센서의 측정 거리
 */
-float getEndAng(int r, float tilt)
+float getEndAng(int r, float Hypo_ground, float tilt)
 {
-  float height = HYPO_TOP * sin(radians(tilt));
+  float height = Hypo_ground * sin(radians(tilt));
   float z = (180 - height) / r;
   float rad_z = asin(z);
   float ang_z = rad_z / 3.141592654 * 180;
 
-  if (isnan(ang_z)) {
-    ang_z = 50;
-  }
-  //printStr("endAng", ang_z + 100);
-  return ceil(ang_z) + 100;
+  float ang_end=ang_z+tilt;
+  
+  return ang_end;
 }
 
 
@@ -205,12 +211,13 @@ void rotateServoMotorForwards() {
   updateGyroValue();
   double pitch = ceil(getPitch());
   if (abs(pitch) >= 10) {
+   
     int currentServoAng = servo[C].read();
+     Serial.println("pitch = "+String(pitch)+", currentServoAng ="+ String(currentServoAng)+" , 조정 값=" + (currentServoAng - pitch));
     if (currentServoAng - pitch > 0 and currentServoAng - pitch < 180) {
       currentServoAng = currentServoAng - pitch;
       servo[C].write(currentServoAng);
-      delay(20);
-      Serial.println(" ....... current angle = " + String(currentServoAng));
+      delay(15);
       updateGyroValue();
     }
   }
@@ -221,45 +228,78 @@ void rotateServoMotorForwards() {
 */
 bool moveUltraMotorUpAndDown_1(int startAngle, int endAngle, int tilt) {
   int result  = 0;
-
+  float distance = 0; //거리
+  float currHeight = 0;
+  float cosVal = 0;
+  float currGap = 0;
+  //=========== 계단 검사 ===============//
+  boolean startedChecking = false;
+  int stairsCount = 0; // 처음 currgap이 6이상인 순간 부터 gap이 abs(2)이하인 구간이 연속되면 나오는
+  int stairsCount2 = 0; //
+  int degree = 0;
+  float preHeightForStairs = 0;
   //========== 낭떠러지 검사 =============//
   int boundary = tilt / 2; //낭떠러지 검사시 기울어짐으로 인한 초음파 센서 이상값 발생을 막기 위해 측정 바운더리 지정
-  int count = 0; // 낭떠러지 검사 시 낭떠러지로 추정되는 값이 4개 이상 나와야 낭떠러지로 판단함
-  float preDistance = 0;
-  float distance = 0; //거리
+  int slopeCount = 0; // 낭떠러지 검사 시 낭떠러지로 추정되는 값이 4개 이상 나와야 낭떠러지로 판단함
+  float preHeightForSlope = 0;
   //====================================//
-  rotateServoMotorForwards();
-
+ 
   if (startAngle <= maxAngle || startAngle >= 0)
   {
-
     for (int ang = 0 ; ang < endAngle; ang++) // for문을 돌며 모터 각도를 설정.
     {
-      updateGyroValue();
-      if (ang % 5 == 0) { //4번에 한번씩 정면 보도록 중앙 서보모터 움직임
-        rotateServoMotorForwards();
-      }
-
+      //5번에 한번씩 정면 보도록 중앙 서보모터 움직임
+      
+      if (ang % 10 == 0) rotateServoMotorForwards();
       servo[UB].write(ang);
-      delay(5);
+      delay(1);
+      
+      //-------- 계단 & 낭떠러지 검사------------//
+      distance = sensingUltra(UB);
+      degree = 90 - tilt + ang;
+      cosVal = cos(radians(degree));
+      preHeightForStairs = currHeight; //지팡이에서 땅까지의 직각거리
+      currHeight = distance * cosVal; //지팡이에서 땅까지의 직각거리
+      
+      //========= 계단 검사 =======================//
+      if (cosVal >= 0 && ang != 0) {
+        currGap = preHeightForStairs - currHeight;
+        //Serial.println("currGap  = "+String(currGap)+"....");
+        if(!startedChecking){
+           if((stairsCount = checkStairs(stairsCount,currGap,startedChecking))==1){
+              startedChecking = true;
+           }
+        }else if(startedChecking){
+          stairsCount = checkStairs(stairsCount, currGap,startedChecking);
+          if(stairsCount == 4){
+            stairsCount2++;
+            stairsCount = 0;
+            startedChecking= false;
+           // Serial.println("계단으로 의심되는 구간 " + String(stairsCount2) + "...");
+          }
+        }
+        if(stairsCount2 > 4){
+          //계단 알림
+          alarm(2,15,30);
+          stairsCount2 = 0;
+        }
+      }
+      
       //========== 낭떠러지 검사 =============//
       // 0도에서 boundary(tilt/2)까지 앞에 낭떠리지 검사 : tilt/2이상일때 기울어짐으로 초음파 값 제대로 측정 안됨.
       if (ang < boundary) {
-        distance = sensingUltra(UB);
-        count = checkSlope(ang, tilt, count , preDistance, distance);
-        if ( count == 0  || preDistance == 0) {
-          preDistance = distance;
-        } else {
-          Serial.println("낭떠러지 카운트 중입니다.. count = " + String(count));
+          currGap = preHeightForSlope - currHeight;
+          slopeCount = checkSlope(slopeCount , currGap);
+        if (slopeCount == 0  || preHeightForSlope == 0) {
+          preHeightForSlope = currHeight;
         }
-        //=======================================//
-        //========== 전방 장애물 검사 =============//
-      } else if (ang >= startAngle) {
-          result = isBlocked(UB);  //해당 거리에 물체가 있는가?
-          // 시작 각도에서 초음파 센서의 맨 처음 측정값이 0이 나올 경우를 스킵하기 위한 조건문
-          // 시작 각도에서는 무조건 pass
-          if (result == 1 &&  ang != startAngle) {
-              return true;
+      }
+      //========== 전방 장애물 검사 =============//
+      if (ang >= startAngle) {
+        if (result != 1 ) result = isBlocked(UB); //해당 거리에 물체가 있는가?
+        else {
+          //result가 1일 경우 시작 각도에서 초음파 센서의 맨 처음 측정값이 0이 나올 경우를 스킵하기 위한 조건문
+          if (ang != startAngle && cosVal < 0)  return true;
         }
       }
     }
@@ -267,24 +307,35 @@ bool moveUltraMotorUpAndDown_1(int startAngle, int endAngle, int tilt) {
   }
   return false;
 }
+/*
+   계단 체크
+*/
+int checkStairs(int count, float gap, boolean startedChecking) {
+    if(!startedChecking){
+      if(gap > 5 && gap <= 10){
+        return 1;
+      }
+    }else{
+      if (abs(gap) < 2) {
+        //Serial.println("계단 체크 " + String(count + 1) + "....");
+        return count + 1;
+      }
+    }
+  return 0;
+}
 
 /* 바닥에 경사 확인
    startAng까지 앞 쪽에 낭떠러지가 있는지 확인한다.
 */
-int checkSlope(int ang, int tilt, int count, float preDistance , float currDistance ) {
+int checkSlope(int count, float gap) {
   /*전값과의 차이가 +15 이상일때 낭떠러지 구간을 측정
-     count 중 일 때는 preHeight을 갱신하지 않는다.*/
-  int degree = 90 - tilt + ang;
-
-  float preHeight = preDistance * cos(radians(degree)); //지팡이에서 땅까지의 직각거리
-  float currHeight = currDistance * cos(radians(degree)); //지팡이에서 땅까지의 직각거리
-  Serial.println("1.." + String(degree) + "일때 " + String(currHeight) + "cm");
-  if ((currHeight - preHeight) > 20) {
+     count 중 일 때는 preHeight을 갱신하지 않는다.*///지팡이에서 땅까지의 직각거리
+   if (gap < -20) {
     if (count > 4) {
       Serial.println(".......낭떠러지");
+      alarm(2,5,10);
       return 0;
     }
-    // if(count == 0 ) Serial.println("...... 카운트 시작");
     return count + 1;
   }
   return 0;
@@ -300,7 +351,6 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle) {
       servo[UB].write(ang);
       delay(5);
       result = isBlocked(UB); // 해당 거리에 물체가 있는가?
-
       /*
          시작 각도에서 초음파 센서의 맨 처음 측정값이 0이 나올 경우를 스킵하기 위한 조건문
          시작 각도에서는 무조건 pass
@@ -320,38 +370,27 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle) {
 */
 void checkRightLeft() {
   int direction = moveUltraMotorRightAndLeft();
-  if (direction != 0)
-    if (direction == LEFT) {
-      Serial.println("Direction: 왼쪽");
-      changeHandleAngle(LEFT);
-    } else if (direction == RIGHT) {
-      changeHandleAngle(RIGHT);
-      Serial.println("Direction: 오른쪽");
-    } else if (direction == CENTER) {
-      changeHandleAngle(RIGHT);
-      Serial.println("Direction: 중앙");
-    } else {
-      changeHandleAngle(CENTER);
-      Serial.println("Direction: 방향 X");
-    }
-  else {
+  if (direction != 0){
+      Serial.println("Direction: "+ String(direction));
+      changeHandleAngle(direction);
+  } else {
     Serial.println("막힘.....");
-    alram();
+    alarm(1,100,500);
   }
 }
 
-void alram() {
+void alarm(int cnt, int delay1, int delay2) {
   //진동모터 알림
-  /*
-    analogWrite(vibrationPin,150);
-    delay(10);
-    analogWrite(vibrationPin,150);
-    delay(100);
-    analogWrite(vibrationPin,150);
-    delay(10);
-    analogWrite(vibrationPin,150);
-    delay(100);
-  */
+  for(int i = 0 ; i< cnt ; i++){
+     Serial.println("알람...."+String(i));
+     analogWrite(vibrationPin,150);
+     delay(delay1);
+     analogWrite(vibrationPin,0);
+     analogWrite(vibrationPin,150);
+     delay(delay2);
+     analogWrite(vibrationPin,0);
+     
+  }
 }
 
 /**
@@ -407,18 +446,11 @@ int moveUltraMotorRightAndLeft() {
       break;
     }
     // @}
-
     //Serial.print(curVal);
     preVal = curVal;
   }
-  Serial.println();
-
+  //Serial.println();
   if (angle == GAP_END && count < SEQUENCE_LIMIT) Serial.println("빈 공간 못찾음:" + String(count));
-  for (int i = 0 ; i <  GAP_END - GAP_START  ; i++ , angle--) {
-    servo[RL].write(angle);
-    delay(5);
-  }
-
   return mDirection;
 }
 
@@ -482,30 +514,20 @@ float sensingUltra(int sensorType) {
   // 초음파를 보낸다. 다 보내면 echo가 HIGH 상태로 대기하게 된다.
   digitalWrite(trigPin[sensorType], LOW);
   digitalWrite(echoPin[sensorType], LOW);
-  delay(10);
+  delayMicroseconds(2);
   digitalWrite(trigPin[sensorType], HIGH);
-  delay(10);
+  delayMicroseconds(2);
   digitalWrite(trigPin[sensorType], LOW);
 
   // echoPin 이 HIGH를 유지한 시간을 저장 한다.
   unsigned long  mDuration = pulseIn(echoPin[sensorType], HIGH);
   //Serial.println("Duration: "+String(mDuration));
-  delay(100);
+  delayMicroseconds(100);
   // HIGH 였을 때 시간(초음파가 보냈다가 다시 들어온 시간)을 가지고 거리를 계산 한다.
   float distance = mDuration / 29.0 / 2.0;
 
   return distance;
 }
-/*
-  int analogUltra() {
-  int d = analogRead(sensorPin);
-  delay(100);
-  // int cm = (d / 2) *2.4;
-  int cm = d / 4.883 ;
-  //Serial.println(String(d) + "mv, " + String(cm) + "cm");
-  return d;
-  }
-*/
 
 void printStr(String head, float value) {
   Serial.print(head);
