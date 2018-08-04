@@ -1,19 +1,16 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include "TTP229.h"
-#include "Adafruit_MPR121.h"
-
 #define BUFF_SIZE 256
 #define SCL_PIN 2
 #define SDO_PIN 3
 #define TTP_229_TYPE 0
-#define MPR_121_TYPE 1
 TTP229 ttp229(SCL_PIN, SDO_PIN); // TTP229(sclPin, sdoPin)
 
 int ledPin = 13;
 
 // IRQ:2, SCL: A5, SDA: A4,..
-int touchPadMode = MPR_121_TYPE;
+int touchPadMode = TTP_229_TYPE;
 
 // TTP229 를 사용하였을 때,
 byte touchedKey;
@@ -23,8 +20,6 @@ static uint16_t oldState = 9999;
 // MPR121을 사용하였을 때
 uint16_t lastTouched = 0;
 uint16_t currTouched = 0;
-// You can have up to 4 on one i2c bus but one is enough for testing!
-Adafruit_MPR121 cap = Adafruit_MPR121();
 
 
 int joystick_x = A0;
@@ -35,7 +30,9 @@ int blue_Rx = 4;  //블루투스 모듈의 R(Receive)x를 Digital pin 10번에 �
 
 int bufferSize = 0;
 //String mac_addr = "rn00:21:13:01:51:5D\n"; // 박효정 MAC_ID
-String mac_addr = "\r20:16:05:19:90:62\n"; // 이호찬 MAC_ID
+//String mac_addr = "\r20:16:05:19:90:62\n"; // 이호찬 MAC_ID
+
+String mac_addr = "\rFC:A8:9A:00:20:E2\n"; // 이호찬 MAC_ID
 //00:21:13:01:51:5D//??
 int isSerialMode = 0;
 
@@ -76,17 +73,6 @@ void setup(){
  
   index =0;
   bufferSize = 0;
-
-  if (touchPadMode == MPR_121_TYPE) {
-    while (!Serial) {
-       delay(10);
-    }
-    if (!cap.begin(0x5A)) {
-      Serial.println("MPR121 not found, check wiring.");
-      while(1) ;
-    }
-    Serial.println("MPR121 found!");
-  }
 }
 
 void loop(){
@@ -187,7 +173,7 @@ void sendJoyStickInput() {
   // put your main code here, to run repeatedly:
   int x = analogRead(joystick_x);
   int y = analogRead(joystick_y);
-
+  //Serial.println(String(x)+", "+String(y));
   // Process clicking the button.
   if (digitalRead(joystick_press) == LOW && 
         x >= 400 && x <= 600 && y >= 400 && y <= 600 && sel_m == 0) {
@@ -248,11 +234,12 @@ void checkTouchPad() {
   uint16_t key = 0;
   if (touchPadMode == TTP_229_TYPE) {
     key = ttp229.ReadKey16(); // Blocking
-  } else if (touchPadMode == MPR_121_TYPE) {
+  } /*else if (touchPadMode == MPR_121_TYPE) {
     key =  checkMPR121Key();
-  }
+  }*/
   if (key) {
-    //Serial.println(key);
+    //if (key >=1 && key <=11) 
+    Serial.println(key);
     String dir;
     if (key == 3) { // 0
       dir = "\rb0\n";
@@ -283,35 +270,4 @@ void checkTouchPad() {
   }
   return;
 }
-
-uint8_t checkMPR121Key() {
-  currTouched = cap.touched();  
-  for (uint8_t i=0; i<12; i++) {
-    // it if *is* touched and *wasnt* touched before, alert!
-    if ((currTouched & _BV(i)) && !(lastTouched & _BV(i)) ) {
-      Serial.print(i); Serial.println(" touched");
-    }
-    // if it *was* touched and now *isnt*, alert!
-    if (!(currTouched & _BV(i)) && (lastTouched & _BV(i)) ) {
-      //Serial.print(i); Serial.println(" released");
-      if (i == 2) return 3; // 0
-      else if (i == 1) return 2; // 1
-      else if (i == 0) return 1; // 2
-      else if (i == 6) return 7; // 3
-      else if (i == 5) return 6; // 4
-      else if (i == 4) return 5; // 5
-      else if (i == 3) return 4; // mode
-      else if (i == 7) return 11; // remove all
-      else if (i == 11) return 9; // remove
-      else if (i == 9) return 7; // double
-      else if (i == 8) return 8; // complete
-    }
-  }
-
-  delay(8);
-  lastTouched = currTouched;
-
-  return ;
-}
-
 

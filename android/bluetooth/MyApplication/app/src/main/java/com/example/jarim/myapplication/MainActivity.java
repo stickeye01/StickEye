@@ -297,7 +297,7 @@ public class MainActivity extends Activity implements OnClickListener {
                     replace("\n", "");
             if (Constants.macAddr ==  null || Constants.macAddr == "" ||
                     Constants.macAddr == "No device exists") {
-                Constants.macAddr = "20:16:05:19:90:62";
+                Constants.macAddr = "FC:A8:9A:00:20:E2";
                 Log.e("LHC", "Constants is forcefully registered");
             }
             txt_usb_stats.setText(Constants.macAddr);
