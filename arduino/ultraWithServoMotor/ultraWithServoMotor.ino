@@ -15,13 +15,13 @@
   x : roll
   =====================================================*/
 
-#define RIGHT 70
-#define LEFT 110
+#define RIGHT 30
+#define LEFT 150
 #define CENTER 90
 
 #define SEQUENCE_LIMIT 30.0 //(degree)
-#define LIMIT_RL 60 //(height(cm) - 100cm)
-#define LIMIT_UL 180
+#define LIMIT_RL 100 //(height(cm) - 100cm)
+#define LIMIT_UL 60
 
 #define GAP 140
 #define GAP_START 20
@@ -42,7 +42,7 @@ const int vibrationPin = 6;
    ultra sensor and servo motor
   ========================================================*/
 // index 0은 좌/우 측정, 1은 상/하 측정에 사용.
-const int limit[] = {60, 80};
+const int limit[] = {100, 50};
 
 const int servoMotorPin[] = {A2, A3, A1};
 const int echoPin[] = {11, 5};
@@ -66,7 +66,7 @@ const int handleMotorPin = A0;
   ===========================================================*/
 unsigned long preTime = 0;
 unsigned long  currentTime = 0;
-unsigned int duration = 3000;
+unsigned int duration = 1000;
 
 /*===================================================
   setup
@@ -138,20 +138,14 @@ void startObstacDetect() {
 
     //printStr("각도 : ", roll);
     updateGyroValue();
+    rotateServoMotorForwards();
+    int startAng = getStartAng(180, roll);
+    int endAng = getEndAng(180, roll);
     
-    servo[UB].write(0);
-    float Hypo_ground = sensingUltra(UB);
-    if(Hypo_ground > 130)
-        Hypo_ground=75;
- 
-    int startAng = getStartAng(180,Hypo_ground, roll);
-    int endAng = getEndAng(180,Hypo_ground, roll);
+   //printStr("pitch 각도 : ", getPitch());
+   //printStr("servo : ", servo[C].read());
    
-    
-    printStr("pitch 각도 : ", getPitch());
-    printStr("servo : ", servo[C].read());
-   
-    bool mIsBlocked = moveUltraMotorUpAndDown_1(startAng, endAng, roll);
+    bool mIsBlocked = moveUltraMotorUpAndDown(startAng, 90);
     //위아래 측정시 영역안에 장애물이 한개라도 있을 경우 true 아니면 false
     if (mIsBlocked) {
       checkRightLeft();
@@ -173,18 +167,15 @@ void startObstacDetect() {
    tilt : 자이로센서로 구한 지팡이 기울기(각도º)
    HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
    height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(cane)
-   Hypo_ground : 서보모터가 0도일 때의 상/하 초음파 센서의 측정 거리
-   
 */
 
-float getStartAng(int r, float Hypo_ground,  float tilt)
+float getStartAng(int r, float tilt)
 {
-  float height = Hypo_ground * sin(radians(tilt));
-  float x = height / r;
+  float height = HYPO_TOP * sin(radians(tilt));
+  float x = height / HYPO_TOP;
   float rad_x = acos(x);
   float ang_x = rad_x / 3.141592654 * 180;
-  float ang_start=ang_x-(90-tilt);
-  return ang_start;
+  return ang_x;
 }
 
 /*
@@ -192,18 +183,15 @@ float getStartAng(int r, float Hypo_ground,  float tilt)
    tilt : 자이로센서로 구한 지팡이 기울기(각도º)
    HYPO_TOP : 위아래 장애물을 감지하는 센서의 지팡이 상의 위치
    height : 위아래 장애물 감지 센서의 바닥과의 직각 거리 (높이),  l*sin(caneTilt)
-   Hypo_ground : 서보모터가 0도일 때의 상/하 초음파 센서의 측정 거리
 */
-float getEndAng(int r, float Hypo_ground, float tilt)
+float getEndAng(int r, float tilt)
 {
-  float height = Hypo_ground * sin(radians(tilt));
+  float height = HYPO_TOP * sin(radians(tilt));
   float z = (180 - height) / r;
   float rad_z = asin(z);
   float ang_z = rad_z / 3.141592654 * 180;
 
-  float ang_end=ang_z+tilt;
-  
-  return ang_end;
+  return ceil(ang_z) + 100;
 }
 
 
@@ -213,7 +201,7 @@ void rotateServoMotorForwards() {
   if (abs(pitch) >= 10) {
    
     int currentServoAng = servo[C].read();
-     Serial.println("pitch = "+String(pitch)+", currentServoAng ="+ String(currentServoAng)+" , 조정 값=" + (currentServoAng - pitch));
+     //Serial.println("pitch = "+String(pitch)+", currentServoAng ="+ String(currentServoAng)+" , 조정 값=" + (currentServoAng - pitch));
     if (currentServoAng - pitch > 0 and currentServoAng - pitch < 180) {
       currentServoAng = currentServoAng - pitch;
       servo[C].write(currentServoAng);
@@ -344,18 +332,22 @@ int checkSlope(int count, float gap) {
 bool moveUltraMotorUpAndDown(int startAngle, int endAngle) {
   int sum = 0;
   int result  = 0;
+  float pre = 0;
   if (startAngle <= maxAngle || startAngle >= 0)
   {
     for (int ang = startAngle; ang < endAngle; ang++) // for문을 돌며 모터 각도를 설정.
     {
       servo[UB].write(ang);
       delay(5);
+      pre = result;
       result = isBlocked(UB); // 해당 거리에 물체가 있는가?
+     
       /*
          시작 각도에서 초음파 센서의 맨 처음 측정값이 0이 나올 경우를 스킵하기 위한 조건문
          시작 각도에서는 무조건 pass
       */
-      if (result == 1 &&  ang != startAngle) {
+      if (result == 1 &&  ang != startAngle && pre == 1) {
+        Serial.println("안전 구간 탐색을 시작합니다...");
         return true;
       }
     }
@@ -371,11 +363,11 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle) {
 void checkRightLeft() {
   int direction = moveUltraMotorRightAndLeft();
   if (direction != 0){
-      Serial.println("Direction: "+ String(direction));
+      //Serial.println("Direction: "+ String(direction));
       changeHandleAngle(direction);
   } else {
     Serial.println("막힘.....");
-    alarm(1,100,500);
+    alarm(2,100,500);
   }
 }
 
@@ -461,10 +453,13 @@ int calculateDirection (int s, int e) {
   int mid = (s + e) / 2;
   delay(1);
   if (mid < 90) {
+    Serial.println("오른쪽으로 이동하세요");
     return RIGHT;
   } else if (mid == 90) {
+    Serial.println("중앙으로 이동하세요");
     return CENTER;
   } else {
+    Serial.println("왼쪽으로 이동하세요");
     return LEFT;
   }
 }
@@ -497,7 +492,7 @@ float isBlocked(int sensorType) {
   delayMicroseconds(100);
   // HIGH 였을 때 시간(초음파가 보냈다가 다시 들어온 시간)을 가지고 거리를 계산 한다.
   float distance = mDuration / 29.0 / 2.0;
-
+// Serial.println("dist "+ String(distance));
   if (distance > 2.0 && distance < limit[sensorType]) {
     //Serial.println(1);
     return 1;
