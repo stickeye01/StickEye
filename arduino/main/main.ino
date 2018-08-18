@@ -174,7 +174,7 @@ float getStartAng(int r, float tilt)
   float height = HYPO_TOP * sin(radians(tilt));
   float x = height / HYPO_TOP;
   float rad_x = acos(x);
-  float ang_x = rad_x / 3.141592654 * 180;
+  float ang_x = rad_x / 3.141592654 * limit[1];
   return ang_x;
 }
 
@@ -189,7 +189,7 @@ float getEndAng(int r, float tilt)
   float height = HYPO_TOP * sin(radians(tilt));
   float z = (180 - height) / r;
   float rad_z = asin(z);
-  float ang_z = rad_z / 3.141592654 * 180;
+  float ang_z = rad_z / 3.141592654 * limit[1];
 
   return ceil(ang_z) + 100;
 }
@@ -199,7 +199,6 @@ void rotateServoMotorForwards() {
   updateGyroValue();
   double pitch = ceil(getPitch());
   if (abs(pitch) >= 10) {
-   
     int currentServoAng = servo[C].read();
      //Serial.println("pitch = "+String(pitch)+", currentServoAng ="+ String(currentServoAng)+" , 조정 값=" + (currentServoAng - pitch));
     if (currentServoAng - pitch > 0 and currentServoAng - pitch < 180) {
@@ -337,11 +336,22 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle) {
   {
     for (int ang = startAngle; ang < endAngle; ang++) // for문을 돌며 모터 각도를 설정.
     {
+      if (ang % 10 == 0) rotateServoMotorForwards();
       servo[UB].write(ang);
       delay(5);
+      //Serial.println("자이로센서 값 : "+String(getPitch()));
       pre = result;
       result = isBlocked(UB); // 해당 거리에 물체가 있는가?
-     
+      /**/
+      
+      //========== 낭떠러지 검사 =============//
+      // 0도에서 boundary(tilt/2)까지 앞에 낭떠리지 검사 : tilt/2이상일때 기울어짐으로 초음파 값 제대로 측정 안됨.
+      //if (ang < boundary) {
+      //    currGap = preHeightForSlope - currHeight;
+      //    slopeCount = checkSlope(slopeCount , currGap);
+      //  if (slopeCount == 0  || preHeightForSlope == 0) {
+      //    preHeightForSlope = currHeight;
+      //  }
       /*
          시작 각도에서 초음파 센서의 맨 처음 측정값이 0이 나올 경우를 스킵하기 위한 조건문
          시작 각도에서는 무조건 pass
@@ -361,7 +371,7 @@ bool moveUltraMotorUpAndDown(int startAngle, int endAngle) {
    막혔을 시 진동모터 진동
 */
 void checkRightLeft() {
-  int direction = moveUltraMotorRightAndLeft();
+  int direction = moveUltraMotorRightAndLeft_1();
   if (direction != 0){
       //Serial.println("Direction: "+ String(direction));
       changeHandleAngle(direction);
@@ -434,7 +444,7 @@ int moveUltraMotorRightAndLeft() {
     if (count >= SEQUENCE_LIMIT) {
       end = angle;
       mDirection = calculateDirection(start, end);
-      angle = GAP_END - GAP_START;
+      //angle = GAP_END - GAP_START;
       break;
     }
     // @}
@@ -446,6 +456,70 @@ int moveUltraMotorRightAndLeft() {
   return mDirection;
 }
 
+
+/*
+ * 중앙 고려를 위한 버전 2
+ * 지나갈수있다고 판단하는 지형인 30이므로 중앙이 나오려면  105
+*/
+int moveUltraMotorRightAndLeft_1() {
+  int angle = GAP_START;
+  int start = GAP_START;
+  int end = GAP_END;
+  int count = 0; // 빈 공간 각도 개수.
+  int eCount = 0; // 문제 있는 공간 (error place) 의 개수. (emptyRate를 계산하기 위해 사용한다.)
+  int preVal = 0; // 연속적으로 빈 공간이 있는지 확인하기 위한 변수. 이전 장애물 여부 값.
+  int curVal = 0; // 위와 같은 의도로 사용되는 변수. 현재 장애물 여부 값.
+  int mDirection = 0; // 방향.
+  float emptyRate = 0.0f; // 중간 중간 이상한 값이 나타날 경우 (이상한 값 기준: 1이거나 -1등 에러 값)
+  // 해당 값을 무시하기 위해 비율을 계산한다.
+  // 만약 20% 이하로 전방이 비어있다면, 해당 방향으로 길 안내를 제시한다.
+  //20~70/ 70~120 / 120~160//
+  for (int i = 0; i < GAP_END - GAP_START ; i++, angle ++ ) {
+    servo[RL].write(angle);
+    delay(5);
+    // @{ 연속적으로 빈 공간인지 체크하기 위한 조건문.
+    if ((curVal = isBlocked(RL)) == preVal && preVal == 0) {
+      if (count == 0) start = angle;  // 시작각도 구하기.
+      count ++;
+    } else if (count > 0) {
+      eCount ++;
+      emptyRate = eCount / count * 100;
+      //Serial.println(String(eCount)+"/"+String(count)+"*100 ="+String(emptyRate));
+      if (emptyRate < 10) {
+        curVal = 0; // emptyRate가 20%보다 작을 경우, 강제로 현재 장애물 여부 변수를
+        // '장애물 없음'으로 지정한다. 따라서 다음 iteration에는
+        // 장애물이 연속적으로 없다고 판단하고 측정한다.
+        continue;
+      }
+      else {    // 만약 emptyRate가 20%보다 클 경우에는 이미 빈공간이 아니라는 판단을 한 것.
+        count = 0;
+        eCount = 0;
+      }
+    }
+    // @}
+
+    // @{ 만약 빈 공간이 통과할 만큼 많다?, 바로 방향 알려주고 나가기. SEQUENCE_LIMIT : 30
+    //
+    if (count >= SEQUENCE_LIMIT) {
+      end = angle;
+      mDirection = calculateDirection(start, end);
+      //angle = GAP_END - GAP_START;
+      Serial.println("start : "+ String(start) +" end: "+ String(end));
+      if(angle == 115){
+        mDirection = CENTER; 
+        break;
+      }
+    }
+    // @}
+    //Serial.print(curVal);
+    preVal = curVal;
+  }
+  //Serial.println();
+  if (angle == GAP_END && count < SEQUENCE_LIMIT) Serial.println("빈 공간 못찾음:" + String(count));
+  return mDirection;
+}
+
+
 /**
    구간의 시작 각도와 끝각도를 가지고 방향 결정.
 */
@@ -453,13 +527,11 @@ int calculateDirection (int s, int e) {
   int mid = (s + e) / 2;
   delay(1);
   if (mid < 90) {
-    Serial.println("오른쪽으로 이동하세요");
+    
     return RIGHT;
   } else if (mid == 90) {
-    Serial.println("중앙으로 이동하세요");
     return CENTER;
   } else {
-    Serial.println("왼쪽으로 이동하세요");
     return LEFT;
   }
 }
@@ -470,58 +542,12 @@ int calculateDirection (int s, int e) {
 void changeHandleAngle(int pos) {
   if (handleAngle != pos) {
     handleAngle = pos;
+    if(pos == RIGHT)  Serial.println("오른쪽으로 이동하세요");
+    if(pos == CENTER) Serial.println("중앙으로 이동하세요");
+    if(pos == LEFT) Serial.println("왼쪽으로 이동하세요");
     handle.write(handleAngle);
     delay(20);
   }
-}
-
-/**
-   초음파 센서의 측정값을 구함
-*/
-float isBlocked(int sensorType) {
-  // 초음파를 보낸다. 다 보내면 echo가 HIGH 상태로 대기하게 된다.
-  digitalWrite(trigPin[sensorType], LOW);
-  digitalWrite(echoPin[sensorType], LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin[sensorType], HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin[sensorType], LOW);
-
-  // echoPin 이 HIGH를 유지한 시간을 저장 한다.
-  unsigned long  mDuration = pulseIn(echoPin[sensorType], HIGH);
-  delayMicroseconds(100);
-  // HIGH 였을 때 시간(초음파가 보냈다가 다시 들어온 시간)을 가지고 거리를 계산 한다.
-  float distance = mDuration / 29.0 / 2.0;
-// Serial.println("dist "+ String(distance));
-  if (distance > 2.0 && distance < limit[sensorType]) {
-    //Serial.println(1);
-    return 1;
-  } else {
-    //Serial.println(0);
-    return 0;
-  }
-}
-
-/**
-   초음파 센서 구동 후 측정 거리 반환
-*/
-float sensingUltra(int sensorType) {
-  // 초음파를 보낸다. 다 보내면 echo가 HIGH 상태로 대기하게 된다.
-  digitalWrite(trigPin[sensorType], LOW);
-  digitalWrite(echoPin[sensorType], LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin[sensorType], HIGH);
-  delayMicroseconds(2);
-  digitalWrite(trigPin[sensorType], LOW);
-
-  // echoPin 이 HIGH를 유지한 시간을 저장 한다.
-  unsigned long  mDuration = pulseIn(echoPin[sensorType], HIGH);
-  //Serial.println("Duration: "+String(mDuration));
-  delayMicroseconds(100);
-  // HIGH 였을 때 시간(초음파가 보냈다가 다시 들어온 시간)을 가지고 거리를 계산 한다.
-  float distance = mDuration / 29.0 / 2.0;
-
-  return distance;
 }
 
 void printStr(String head, float value) {
