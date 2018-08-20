@@ -25,7 +25,7 @@ import com.example.jarim.myapplication.TtsService;
  * Created by hochan on 2018-02-07.
  */
 
-public class PhoneCallBean extends AppBean{
+public class    PhoneCallBean extends AppBean{
     private EditText input_etext;
     private int no_degree = Constants.PHONE_NUM_WRITE_STAGE;
     private String phoneNum;

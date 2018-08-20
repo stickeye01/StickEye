@@ -111,6 +111,7 @@ public class PhoneBookBean extends AppBean {
                 null, null
         );
 
+
         while (clsCursor.moveToNext()) {
             cInfo = new ContactInfo();
             String contactId = clsCursor.getString(0);
