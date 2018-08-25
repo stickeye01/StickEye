@@ -35,7 +35,8 @@ int blue_Rx = 4;  //블루투스 모듈의 R(Receive)x를 Digital pin 10번에 �
 
 int bufferSize = 0;
 //String mac_addr = "rn00:21:13:01:51:5D\n"; // 박효정 MAC_ID
-String mac_addr = "\r20:16:05:19:90:62\n"; // 이호찬 MAC_ID
+//String mac_addr = "\r20:16:05:19:90:62\n"; // 이호찬 MAC_ID
+String mac_addr = "\rFC:A8:9A:00:20:E2\n"; // 이호찬 MAC_ID
 //00:21:13:01:51:5D//??
 int isSerialMode = 0;
 
