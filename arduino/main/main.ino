@@ -145,7 +145,7 @@ void startObstacDetect() {
    //printStr("pitch 각도 : ", getPitch());
    //printStr("servo : ", servo[C].read());
    
-    bool mIsBlocked = moveUltraMotorUpAndDown(startAng, 90);
+    bool mIsBlocked = moveUltraMotorUpAndDown_2(startAng, 90);
     //위아래 측정시 영역안에 장애물이 한개라도 있을 경우 true 아니면 false
     if (mIsBlocked) {
       checkRightLeft();
@@ -160,6 +160,86 @@ void startObstacDetect() {
     updateGyroValue();
   }
 }
+
+bool moveUltraMotorUpAndDown_2(int startAngle, int endAngle) {
+  int sum = 0;
+  int result  = 0;
+  int count=0;
+  int ecount=0;
+  int preVal=0;
+  int curVal=0;
+  /*
+   * preVal : 이전 장애물 있는지 확인
+   * curVal : 현재 장애물 있는지 확인
+   * result : (count-ecount)/count * 100
+   */
+  if (startAngle <= maxAngle || startAngle >= 0)
+  {
+    for (int ang = startAngle; ang < endAngle; ang++) // for문을 돌며 모터 각도를 설정.
+    {
+      if (ang % 10 == 0) rotateServoMotorForwards();
+      servo[UB].write(ang);
+      delay(5);
+      //Serial.println("자이로센서 값 : "+String(getPitch()));
+      preVal = curVal;
+      curVal = isBlocked(UB); // 해당 거리에 물체가 있는가?
+      /*
+       *  장애물을 연속으로 2번 파악한 경우 -> 11 인 경우
+       *  count를 2로 초기화 / ecount도 2로 초기화
+       *  ecount : 
+       *  2로 초기화하는건, 첫줄에서 언급한 11때문에.
+       */
+
+    //curVal == 1 일때
+      if(curVal==1){
+         //최초로 1,1이 나타났을 떄 초기화
+         if(count >= 2 ){  //11.......01 일때와 11......11일경우
+             Serial.println("11....?1.");
+             count ++;
+             ecount++;
+         }else if(count < 2 && preVal == 1){
+             //최초 11 나왔을 때
+             Serial.println("11......");
+              count = 2;
+              ecount = 2;
+         }
+      }else{
+        //curVal이 0일때
+        //11....................00
+        if(count >= 2){
+          /* 
+           *  00이 나온 경우
+           *  1이 5개 이상 존재하는가? 
+           *  장애물이라고 측정된 비율이 80%이상인가?
+          */
+         
+          if(preVal == 0){
+             Serial.println("11.....00");
+             float ratio = ((float)ecount/count)*100;
+            if(ecount >= 5 && ratio > 80){
+              Serial.println("장애물이 존재합니다.."+String(ecount)+"/"+String(count)+"*100="+String(ratio));
+              count = 0;
+              ecount = 0;
+              return;
+            }else{
+               Serial.println("장애물은 없습니다.."+String(ecount)+"/"+String(count)+"*100="+String(ratio));
+                count = 0;
+                ecount = 0;
+            }
+          }else{
+            Serial.println("11.....10...");
+            count++;
+          }
+        }
+        
+      }
+       
+    }
+    Serial.println();
+  }
+  return false;
+}
+/*****************************************************************************************************/
 
 
 /**
@@ -555,5 +635,3 @@ void printStr(String head, float value) {
   Serial.print(" : ");
   Serial.println(value);
 }
-
-
