@@ -26,9 +26,14 @@
 #define GAP 140
 #define GAP_START 20
 #define GAP_END 160
-#define NUM_ULTRA 2
+#define NUM_ULTRA 3
 #define RL 0 // Right and left
 #define UB 1 // Uppder and Bottom
+
+#define SHANG 0
+#define ZONG 1
+#define HA 2
+
 #define C 2 //Bottom
 
 #define HYPO_BOTTOM 19 //바닥 측정을 위해 달린 초음파 센서의 지팡이 상의 빗변 길이
@@ -42,11 +47,14 @@ const int vibrationPin = 6;
    ultra sensor and servo motor
   ========================================================*/
 // index 0은 좌/우 측정, 1은 상/하 측정에 사용.
-const int limit[] = {100, 50};
+const int limit[] = {100, 180};
 
 const int servoMotorPin[] = {A2, A3, A1};
-const int echoPin[] = {11, 5};
-const int trigPin[] = {10, 3};
+// const int echoPin[] = {11, 5};
+// const int trigPin[] = {10, 3};
+
+const int echoPin[] = {11,9,5};
+const int trigPin[] = {10,6,3};
 
 float distance[2] = {0}; //장애물과의 거리: index 0은 좌/우 측정, 1은 상/하
 
@@ -56,9 +64,8 @@ int maxAngle = 180;
 
 Servo servo[3];
 Servo handle;
-
+float avg = 0;
 int handleAngle = CENTER; // 초기 지팡이 핸들 각도: 기본 센터,
-
 const int handleMotorPin = A0;
 
 /* ========================================================
@@ -82,11 +89,11 @@ void setup() {
     delay(15);
   }
   //init vibration motor pin
-  pinMode( 6 , OUTPUT);
+  //pinMode( 6 , OUTPUT);
   //init
   servo[C].write(90);
   delay(15);
-  servo[UB].write(0);
+  servo[RL].write(90);
   delay(15);
   handle.attach(handleMotorPin);
   delay(15);
@@ -110,7 +117,7 @@ void setup() {
   // @}
   //
   // 칼만 필터에서 사용 되는 타이머
-
+ avg = getAvg();
   preTime = millis();
 }
 
@@ -118,6 +125,7 @@ void setup() {
    Loop
   ============================================================================== */
 void loop() {
+  
   startObstacDetect();
 }
 
@@ -132,34 +140,128 @@ void startObstacDetect() {
       @}
   */
   currentTime = millis();
+
+  
   if (currentTime - preTime >= duration) { // 3초마다 모터 움직이도록 조정
 
-    double roll = ceil(getRoll());
+  //  double roll = ceil(getRoll());
 
     //printStr("각도 : ", roll);
     updateGyroValue();
     rotateServoMotorForwards();
-    int startAng = getStartAng(180, roll);
-    int endAng = getEndAng(180, roll);
+    testCheckBlock();
+    
+    //int startAng = getStartAng(180, roll);
+    //int endAng = getEndAng(180, roll);
     
    //printStr("pitch 각도 : ", getPitch());
    //printStr("servo : ", servo[C].read());
    
-    bool mIsBlocked = moveUltraMotorUpAndDown_2(startAng, 90);
+    //bool mIsBlocked = moveUltraMotorUpAndDown_2(startAng, 90);
     //위아래 측정시 영역안에 장애물이 한개라도 있을 경우 true 아니면 false
+   /*
     if (mIsBlocked) {
       checkRightLeft();
     } else {
       Serial.println("중앙");
       changeHandleAngle(CENTER);
     }
+    */
     delayMicroseconds(10);
     preTime = currentTime;
-
   } else {
     updateGyroValue();
   }
 }
+
+void testCheckBlock(){
+  
+  int limit = 80;
+  int result = 0;
+  result |= testIsBlocked(0,limit) | testIsBlocked(1,limit) |  testIsBlocked(2,avg);
+  if(result == 1){
+     Serial.println("장애물 있음.....");   
+     int direction = testMoveRL();
+     if (direction == RIGHT) {
+     // Serial.println("오른쪽");
+      } else if (direction == CENTER) {
+      //  Serial.println("중앙");
+      } else {
+      // Serial.println("왼쪽");
+      }
+  }
+}
+
+float getAvg(){
+  float sum = 0;
+  for(int i = 0 ; i< 10 ; i++ ){
+      if(i !=  0 ) sum+= sensingUltra(2);
+  }
+  Serial.println("구해진 평균은 : "+String(sum/9));
+  return sum/9;
+}
+
+
+int testMoveRL(){
+  int angle = GAP_START;
+  int start = GAP_START;
+  int end = GAP_END;
+  int count = 0; // 빈 공간 각도 개수.
+  int eCount = 0; // 문제 있는 공간 (error place) 의 개수. (emptyRate를 계산하기 위해 사용한다.)
+  int preVal = 0; // 연속적으로 빈 공간이 있는지 확인하기 위한 변수. 이전 장애물 여부 값.
+  int curVal = 0; // 위와 같은 의도로 사용되는 변수. 현재 장애물 여부 값.
+  int mDirection = 0; // 방향.
+  float emptyRate = 0.0f; // 중간 중간 이상한 값이 나타날 경우 (이상한 값 기준: 1이거나 -1등 에러 값)
+  // 해당 값을 무시하기 위해 비율을 계산한다.
+  // 만약 20% 이하로 전방이 비어있다면, 해당 방향으로 길 안내를 제시한다.
+  for (int i = 0; i < GAP_END - GAP_START ; i++, angle ++ ) {
+    servo[RL].write(angle);
+    delay(5);
+    // @{ 연속적으로 빈 공간인지 체크하기 위한 조건문.
+    if ((curVal = (testIsBlocked(SHANG,30) | testIsBlocked(ZONG,30)  | testIsBlocked(HA,30))) == preVal && preVal == 0) {
+   if (count == 0) start = angle;  // 시작각도 구하기.
+      count ++;
+    } else if (count > 0) {
+      eCount ++;
+      emptyRate = eCount / count * 100;
+      //Serial.println(String(eCount)+"/"+String(count)+"*100 ="+String(emptyRate));
+      if (emptyRate < 10) {
+        curVal = 0; // emptyRate가 20%보다 작을 경우, 강제로 현재 장애물 여부 변수를
+        // '장애물 없음'으로 지정한다. 따라서 다음 iteration에는
+        // 장애물이 연속적으로 없다고 판단하고 측정한다.
+        continue;
+      }
+      else {    // 만약 emptyRate가 20%보다 클 경우에는 이미 빈공간이 아니라는 판단을 한 것.
+        count = 0;
+        eCount = 0;
+      }
+    }
+    // @}
+
+    // @{ 만약 빈 공간이 통과할 만큼 많다?, 바로 방향 알려주고 나가기. SEQUENCE_LIMIT : 30
+    //
+    if (count >= SEQUENCE_LIMIT) {
+      end = angle;
+      if(mDirection == 0)
+           mDirection = calculateDirection(start, end);
+      
+      //angle = GAP_END - GAP_START;
+      //Serial.println("start : "+ String(start) +" end: "+ String(end));
+      if(angle == 115){
+        mDirection = CENTER; 
+        Serial.println("중앙으로 가세요....");
+        break;
+      }
+    }
+    // @}
+    //Serial.print(curVal);
+    preVal = curVal;
+  }
+  //Serial.println();
+  if (angle == GAP_END && count < SEQUENCE_LIMIT) Serial.println("빈 공간 못찾음:" + String(count));
+  return mDirection;
+}
+
 
 bool moveUltraMotorUpAndDown_2(int startAngle, int endAngle) {
   int sum = 0;
@@ -180,67 +282,82 @@ bool moveUltraMotorUpAndDown_2(int startAngle, int endAngle) {
       if (ang % 10 == 0) rotateServoMotorForwards();
       servo[UB].write(ang);
       delay(5);
-      //Serial.println("자이로센서 값 : "+String(getPitch()));
+      
       preVal = curVal;
       curVal = isBlocked(UB); // 해당 거리에 물체가 있는가?
+     // Serial.println(curVal);
       /*
        *  장애물을 연속으로 2번 파악한 경우 -> 11 인 경우
        *  count를 2로 초기화 / ecount도 2로 초기화
        *  ecount : 
        *  2로 초기화하는건, 첫줄에서 언급한 11때문에.
        */
-
-    //curVal == 1 일때
+       
       if(curVal==1){
-         //최초로 1,1이 나타났을 떄 초기화
-         if(count >= 2 ){  //11.......01 일때와 11......11일경우
-             Serial.println("11....?1.");
+         if(count >= 2){  
+              /*
+               * 11.... ?1일 때에 해당된다 이때 이전값이 0인지 1인지는 중요하지 않다. 
+               * 구간 카운팅 중에 1이 나왔으므로 구간(count)을 증가시키고 ecount(장애물 구간 또는 1의 개수)를 증가 시킨다.
+              */
+             Serial.println("11....?1");
              count ++;
              ecount++;
          }else if(count < 2 && preVal == 1){
-             //최초 11 나왔을 때
+             /*
+               * 최초로 11이 나왔을 경우이다. 
+               * 구간에 대한 초기화를 수행한다.
+              */
              Serial.println("11......");
               count = 2;
               ecount = 2;
          }
       }else{
-        //curVal이 0일때
-        //11....................00
         if(count >= 2){
-          /* 
-           *  00이 나온 경우
-           *  1이 5개 이상 존재하는가? 
-           *  장애물이라고 측정된 비율이 80%이상인가?
+          /*
+           *  count가 2보다 크거나 같다는 것은 장애물 측정이 시작 되었다는 것.
+           *  즉 이전에 11이 나왔다는 것이다.
           */
-         
           if(preVal == 0){
-             Serial.println("11.....00");
-             float ratio = ((float)ecount/count)*100;
-            if(ecount >= 5 && ratio > 80){
-              Serial.println("장애물이 존재합니다.."+String(ecount)+"/"+String(count)+"*100="+String(ratio));
-              count = 0;
-              ecount = 0;
-              return;
-            }else{
-               Serial.println("장애물은 없습니다.."+String(ecount)+"/"+String(count)+"*100="+String(ratio));
-                count = 0;
-                ecount = 0;
-            }
+                 /* 
+                  *  11.........................00
+                  *  00이 나온 경우
+                  *  1이 5개 이상 존재하는가? 
+                  *  장애물이라고 측정된 비율이 80%이상인가?
+                  */
+                 Serial.println("11.....00");
+                if(checkRatio(ecount, count)){
+                  //비율과 1의 개수가 충복 되면 다음 단계로 넘어간다.
+                  return true;
+                }else{
+                  //비율과 1의 개수가 충족 되지 않으면 초기화만 수행한다.
+                    count = 0;
+                    ecount = 0;
+                }
           }else{
-            Serial.println("11.....10...");
+            //11..................10인 경우이므로 구간을 의미하는 count만 증가 시킨다.
+            Serial.println("11.....10");
             count++;
           }
-        }
-        
+        } 
       }
-       
     }
     Serial.println();
   }
   return false;
 }
+
 /*****************************************************************************************************/
 
+boolean checkRatio(int ecount, int count){
+  float ratio = ((float)ecount/count)*100;
+  if(ecount >= 5 && ratio > 80){
+    Serial.println("장애물이 존재합니다.."+String(ecount)+"/"+String(count)+"*100="+String(ratio));     
+    return true;
+  }else{
+     Serial.println("장애물은 없습니다.."+String(ecount)+"/"+String(count)+"*100="+String(ratio));
+    return false;
+  }
+}
 
 /**
    시스템 구동시, 모터 초기 각도 계산.
@@ -607,11 +724,12 @@ int calculateDirection (int s, int e) {
   int mid = (s + e) / 2;
   delay(1);
   if (mid < 90) {
-    
+   
     return RIGHT;
   } else if (mid == 90) {
     return CENTER;
   } else {
+   
     return LEFT;
   }
 }
